@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { Cabecera, SelectorUbicacion } from '../ui/componentes';
-import { useConsulta } from '../ui/hooks';
+import { useConsulta, useMinuto } from '../ui/hooks';
 import { navega } from '../ui/router';
 import { abreJornada, jornadasPorUbicacion, notasPorUbicacion } from '../db/repos';
-import { formateaFechaCorta } from '../domain/tiempo';
+import {
+  aInputDateTime,
+  aInstanteISO,
+  desdeInputDateTime,
+  fechaDe,
+  formateaFechaCorta,
+  horaDe,
+  hoy,
+} from '../domain/tiempo';
 import { ETIQUETA_MOTIVO, MOTIVOS, type Motivo, type Ubicacion } from '../domain/tipos';
 
 /**
@@ -16,11 +24,17 @@ export function AbrirJornada() {
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [motivo, setMotivo] = useState<Motivo | null>(null);
   const [abriendo, setAbriendo] = useState(false);
+  /** `null` = usar la hora del momento en que se pulse. Ver `SelectorInicio`. */
+  const [inicio, setInicio] = useState<string | null>(null);
 
   async function abrir(motivoElegido: Motivo | null) {
     if (abriendo) return;
     setAbriendo(true);
-    await abreJornada({ ubicacion_id: ubicacion?.id ?? null, motivo: motivoElegido });
+    await abreJornada({
+      ubicacion_id: ubicacion?.id ?? null,
+      motivo: motivoElegido,
+      hora_inicio: inicio,
+    });
     navega('/', true);
   }
 
@@ -38,6 +52,8 @@ export function AbrirJornada() {
         </label>
 
         {ubicacion && <HistoricoUbicacion ubicacion={ubicacion} />}
+
+        <SelectorInicio valor={inicio} onCambia={setInicio} />
 
         <div className="campo">
           <span>Motivo</span>
@@ -64,8 +80,91 @@ export function AbrirJornada() {
         <p className="suave" style={{ marginTop: 12 }}>
           Lo que falte se completa después, en frío. Abrir siempre gana a rellenar.
         </p>
+        {inicio !== null && fechaDe(inicio) !== hoy() && (
+          <p className="suave">
+            Se archivará en el {formateaFechaCorta(fechaDe(inicio))}, no en el día de hoy.
+          </p>
+        )}
       </div>
     </>
+  );
+}
+
+/**
+ * Hora de inicio (§3.1: «capturada automáticamente, editable»).
+ *
+ * Por defecto no se toca nada: se muestra la hora actual y la jornada se abre
+ * con la del momento exacto en que se pulsa el motivo. Eso es deliberado — si
+ * se guardara aquí la hora de cuando se pintó la pantalla, dejar el móvil en el
+ * bolsillo cinco minutos metería una hora falsa en el parte.
+ *
+ * Por eso `valor === null` significa «la que sea al pulsar», y solo cuando el
+ * usuario ajusta la hora a mano se fija un instante concreto. Ahí es él quien
+ * pone el dato, que es justo lo que hace falta para registrar en frío una
+ * jornada que empezó antes.
+ */
+function SelectorInicio({
+  valor,
+  onCambia,
+}: {
+  valor: string | null;
+  onCambia: (valor: string | null) => void;
+}) {
+  const tic = useMinuto();
+  const [ajustando, setAjustando] = useState(false);
+  const instanteActual = aInstanteISO(new Date(tic));
+  const mostrado = valor ?? instanteActual;
+  const esHoy = fechaDe(mostrado) === hoy();
+
+  if (!ajustando) {
+    return (
+      <div className="campo">
+        <span>Inicio</span>
+        <div className="tarjeta">
+          <strong>
+            {esHoy ? 'Hoy' : formateaFechaCorta(fechaDe(mostrado))} a las {horaDe(mostrado)}
+          </strong>
+          {valor === null && <div className="suave">Se pone sola al elegir el motivo.</div>}
+          <button
+            className="boton plano"
+            onClick={() => {
+              // Se fija el instante al entrar a editar: si se dejara en `null`,
+              // el reloj seguiría corriendo y movería el campo mientras se toca.
+              if (valor === null) onCambia(instanteActual);
+              setAjustando(true);
+            }}
+          >
+            {valor === null ? 'Empezó antes: ajustar' : 'Cambiar'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="campo">
+      <span>Inicio</span>
+      <input
+        type="datetime-local"
+        autoFocus
+        value={aInputDateTime(mostrado)}
+        onChange={(evento) => onCambia(desdeInputDateTime(evento.target.value))}
+      />
+      <div className="fila-botones">
+        <button
+          className="boton"
+          onClick={() => {
+            onCambia(null);
+            setAjustando(false);
+          }}
+        >
+          Usar la hora actual
+        </button>
+        <button className="boton" onClick={() => setAjustando(false)}>
+          Hecho
+        </button>
+      </div>
+    </div>
   );
 }
 
