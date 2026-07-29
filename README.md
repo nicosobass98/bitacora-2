@@ -29,6 +29,27 @@ npm run preview   # sirve dist/ para probar la PWA y el service worker
 La app funciona entera sin configurar nada: abre, cierra, busca y genera avisos
 sin conexión y sin cuenta de Google. Conectar Drive solo añade la copia.
 
+En `npm run dev` **el service worker no se registra**: para probar la instalación
+y el funcionamiento sin red hace falta `npm run build && npm run preview`.
+
+## Abrirla en el móvil
+
+Un service worker exige contexto seguro. `localhost` cuenta, pero la IP de la red
+local por `http://` no: entrando desde el móvil a `http://192.168.x.x:5173` la app
+se ve, pero no se instala ni cachea — o sea, ni icono en el escritorio ni arranque
+sin cobertura. Por eso se publica por HTTPS en GitHub Pages.
+
+**Una vez, en el repositorio:** *Settings → Pages → Build and deployment →
+Source: **GitHub Actions***. No hay que elegir rama.
+
+A partir de ahí, el workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+publica solo en cada `push` a `main`. Para publicar desde una rama sin fusionarla,
+*Actions → Pages → Run workflow* y eligiendo la rama.
+
+Queda servida en `https://nicosobass98.github.io/bitacora-2/`. Desde Chrome en
+Android: menú → **Añadir a pantalla de inicio**. Se abre a pantalla completa, y al
+mantener pulsado el icono aparecen los atajos «Abrir jornada» y «Nueva nota».
+
 ## Conectar la copia en Google Sheets
 
 Solo hace falta una vez, y es opcional.
@@ -41,8 +62,9 @@ Solo hace falta una vez, y es opcional.
    Publica la app **In Production**: en estado *Testing* el refresh token caduca
    a los 7 días y obliga a reautenticar cada semana.
 3. Credenciales → **ID de cliente de OAuth** → tipo *Aplicación web*. En
-   *Orígenes autorizados de JavaScript* pon la URL desde la que sirves la PWA
-   (y `http://localhost:5173` para desarrollo).
+   *Orígenes autorizados de JavaScript* pon el origen desde el que sirves la PWA
+   —para Pages es `https://nicosobass98.github.io`, **sin** la parte
+   `/bitacora-2/`— y `http://localhost:5173` para desarrollo.
 4. En la app: **Ajustes → Client ID**, pegar, **Conectar con Google** y luego
    **Crear la hoja de cálculo**.
 

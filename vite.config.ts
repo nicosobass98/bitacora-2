@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Rutas relativas por defecto, para poder servir el `dist/` desde cualquier
+  // sitio. En GitHub Pages la app cuelga de /<repo>/, y el workflow pasa
+  // `--base=/bitacora-2/` para que el service worker coja ese ámbito.
   base: './',
   plugins: [
     react(),
@@ -13,8 +16,8 @@ export default defineConfig({
         // La app es local-first: todo el shell se precachea y funciona sin red.
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
         navigateFallback: 'index.html',
-        // Las llamadas a Google jamás se cachean: o hay red o van a la cola outbox.
-        navigateFallbackDenylist: [/^\/api/],
+        // Sin `runtimeCaching`: las llamadas a Google no se cachean nunca. O hay
+        // red y se envían, o se quedan en la cola outbox.
         runtimeCaching: [],
       },
       manifest: {

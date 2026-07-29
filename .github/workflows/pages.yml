@@ -1,0 +1,61 @@
+# Compila, prueba y publica la PWA en GitHub Pages.
+#
+# Publicar por HTTPS no es un lujo: un service worker exige contexto seguro, y
+# sin él la app no se instala en el móvil ni arranca sin cobertura, que es medio
+# propósito de la herramienta.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Permite publicar desde una rama sin haberla fusionado todavía.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  comprobar:
+    name: Pruebas y compilación
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      # `npm run build` ya comprueba tipos (`tsc -b`). La base tiene que ser el
+      # nombre del repositorio: en Pages la app cuelga de /<repo>/, no de la raíz.
+      - name: Compilar
+        run: npm run build -- --base=/${{ github.event.repository.name }}/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    name: Publicar en Pages
+    needs: comprobar
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
