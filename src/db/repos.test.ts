@@ -38,6 +38,25 @@ describe('abrir y cerrar jornada', () => {
     expect(await jornadaAbierta()).toMatchObject({ id: jornada.id });
   });
 
+  it('acepta una hora de inicio explícita para registrar en frío', async () => {
+    const jornada = await abreJornada({ hora_inicio: '2026-03-12T22:40:00+01:00' });
+    expect(jornada.hora_inicio).toBe('2026-03-12T22:40:00+01:00');
+    expect(jornada.estado).toBe('abierta');
+  });
+
+  it('archiva la jornada en el día de su hora de inicio, no en el de hoy', async () => {
+    await abreJornada({ hora_inicio: '2026-03-12T22:40:00+01:00' });
+    expect(await jornadasPorFecha('2026-03-12')).toHaveLength(1);
+    expect(await jornadasPorFecha(hoy())).toHaveLength(0);
+  });
+
+  it('marca la modificación con la hora real aunque el inicio sea de antes', async () => {
+    // `actualizado_en` dice cuándo se tocó el registro, no cuándo pasó lo que
+    // cuenta: si se copiara del inicio, la sincronización perdería el orden.
+    const jornada = await abreJornada({ hora_inicio: '2026-03-12T22:40:00+01:00' });
+    expect(jornada.actualizado_en.slice(0, 10)).toBe(hoy());
+  });
+
   it('no encola nada al abrir: una jornada abierta vive solo en el móvil', async () => {
     await abreJornada({});
     const cola = await todosLosElementos();

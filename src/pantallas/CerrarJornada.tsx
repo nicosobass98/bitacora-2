@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Cabecera } from '../ui/componentes';
 import { useConsulta } from '../ui/hooks';
 import { navega } from '../ui/router';
-import { cierraJornada, jornadaAbierta, obtenUbicacion } from '../db/repos';
+import { cierraJornada, jornadaAbierta, leeAjustes, obtenUbicacion } from '../db/repos';
 import {
   aInputDateTime,
   desdeInputDateTime,
   duracionMinutos,
   formateaDuracion,
+  formateaFechaCorta,
   horaDe,
   ahora,
 } from '../domain/tiempo';
@@ -23,9 +24,10 @@ export function CerrarJornada() {
     async () => {
       const abierta = await jornadaAbierta();
       const ubicacion = abierta?.ubicacion_id ? await obtenUbicacion(abierta.ubicacion_id) : null;
-      return { abierta, ubicacion };
+      const ajustes = await leeAjustes();
+      return { abierta, ubicacion, ajustes };
     },
-    ['jornadas'],
+    ['jornadas', 'ajustes'],
   );
 
   const [horaFin, setHoraFin] = useState('');
@@ -55,10 +57,15 @@ export function CerrarJornada() {
     );
   }
 
-  const { abierta, ubicacion } = datos;
+  const { abierta, ubicacion, ajustes } = datos;
   const finISO = desdeInputDateTime(horaFin);
   const minutos = duracionMinutos(abierta.hora_inicio, finISO);
   const finAntesDeInicio = minutos !== null && minutos < 0;
+  // Una jornada registrada en frío arrastra su hora de inicio, pero el fin se
+  // propone con la de ahora. Sin este aviso, cerrarla de un toque metería una
+  // duración disparatada en el parte.
+  const duracionSospechosa =
+    minutos !== null && minutos > ajustes.horas_aviso_jornada_abierta * 60;
 
   async function cerrar() {
     if (cerrando || finAntesDeInicio || !finISO) return;
@@ -90,6 +97,16 @@ export function CerrarJornada() {
         </label>
         {finAntesDeInicio && (
           <p className="aviso rojo">La hora de fin es anterior a la de inicio.</p>
+        )}
+
+        {!finAntesDeInicio && duracionSospechosa && (
+          <div className="aviso">
+            <h3>Saldría una jornada de {formateaDuracion(minutos)}</h3>
+            <p className="suave">
+              Empezó el {formateaFechaCorta(abierta.fecha)} a las {horaDe(abierta.hora_inicio)}.
+              Si es una jornada que registraste en frío, corrige la hora de fin antes de cerrar.
+            </p>
+          </div>
         )}
 
         <label className="campo">

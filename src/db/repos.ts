@@ -7,6 +7,7 @@ import {
   type Ajustes,
   type EstadoJornada,
   type FechaISO,
+  type InstanteISO,
   type Jornada,
   type Motivo,
   type Nota,
@@ -24,6 +25,11 @@ import {
  * ubicación se abre igual como «sin asignar». Nunca se bloquea al usuario en la
  * puerta de un sitio.
  *
+ * `hora_inicio` se captura sola si no se indica, que es el caso normal. Se
+ * acepta explícita para poder registrar en frío una jornada que empezó antes
+ * —§3.1: «capturada automáticamente, editable»—. La `fecha` sale siempre del
+ * instante de inicio, así que una jornada de ayer se archiva en el día de ayer.
+ *
  * No se encola nada aquí: se sincroniza solo al cerrar (§4). Una jornada
  * abierta vive solo en el móvil.
  */
@@ -31,8 +37,9 @@ export async function abreJornada(datos: {
   ubicacion_id?: UUID | null;
   motivo?: Motivo | null;
   sistema?: Sistema | null;
+  hora_inicio?: InstanteISO | null;
 }): Promise<Jornada> {
-  const instante = ahora();
+  const instante = datos.hora_inicio ?? ahora();
   const jornada: Jornada = {
     id: crypto.randomUUID(),
     fecha: fechaDe(instante),
@@ -43,7 +50,9 @@ export async function abreJornada(datos: {
     sistema: datos.sistema ?? null,
     notas: '',
     estado: 'abierta',
-    actualizado_en: instante,
+    // No es `instante`: dice cuándo se tocó el registro, no cuándo ocurrió lo
+    // que cuenta. Con un inicio retrasado, copiarlo desordenaría la cola.
+    actualizado_en: ahora(),
   };
 
   const bd = await abrirBD();
