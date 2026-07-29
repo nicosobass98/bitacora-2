@@ -48,6 +48,7 @@ Vienen de decisiones ya cerradas en la especificación:
 | `src/db` | Apertura de IndexedDB, repositorios, cola outbox y bus de cambios. |
 | `src/sync` | OAuth, cliente de Sheets/Drive, serialización a filas y vaciado. |
 | `src/ics` | Generación de ficheros `.ics`. Funciones puras + entrega. |
+| `src/informes` | Parte de trabajo semanal en `.docx` (`docx`, carga perezosa). |
 | `src/ui` | Router de hash, hooks, componentes compartidos y estilos. |
 | `src/pantallas` | Una pantalla por fichero. |
 

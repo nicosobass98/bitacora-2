@@ -192,6 +192,24 @@ Notifications, así que el aviso se delega al sistema operativo mediante un
 solo entonces la nota se marca como enviada. **La nota nunca se va de la app**:
 confiar en un recordatorio que no existe es peor que no tener recordatorio.
 
+### Parte de trabajo semanal
+
+*Historial → Parte semanal* genera un `.docx` con las jornadas de la semana
+elegida (lunes a domingo), en apaisado para que quepan las 13 columnas del
+parte que exige la empresa/cliente: fecha, obra, cliente, horario, horas
+extra, dietas, VºBº y trabajos realizados.
+
+Solo se rellenan las columnas que Bitácora conoce de verdad — fecha, obra
+(nombre y cliente de la ubicación), horario y una descripción con el motivo y
+las notas. Horas extra, dietas y VºBº se dejan en blanco: inventar un valor
+ahí sería el mismo dato falso que la especificación evita en todas partes.
+
+*Ajustes → Datos para el parte semanal* guarda una vez el nombre, la
+categoría profesional, el NIF y una foto de la firma. Sin firma, el documento
+deja una línea en blanco para firmar a mano — nunca se inventa una. Estos
+datos no se sincronizan ni entran en la copia de seguridad: son personales y
+no tienen por qué viajar a otro dispositivo.
+
 ## Estado y siguientes pasos
 
 Implementado y probado en navegador: el ciclo completo de jornada, notas con

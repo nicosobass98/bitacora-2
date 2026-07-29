@@ -123,12 +123,27 @@ export interface Ajustes {
   spreadsheet_id: string;
   /** Horas tras las que se avisa de una jornada olvidada abierta (§7). */
   horas_aviso_jornada_abierta: number;
+  /** Datos para el parte semanal (`informes/parteSemanal.ts`). Nunca se sincronizan. */
+  nombre_tecnico: string;
+  categoria_profesional: string;
+  nif: string;
+  /** Imagen de la firma en data URL, o `null` si no se ha configurado. */
+  firma_imagen: string | null;
+  /** Dimensiones reales de la imagen, para no deformarla al insertarla en el parte. */
+  firma_ancho: number | null;
+  firma_alto: number | null;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
   google_client_id: '',
   spreadsheet_id: '',
   horas_aviso_jornada_abierta: 12,
+  nombre_tecnico: '',
+  categoria_profesional: '',
+  nif: '',
+  firma_imagen: null,
+  firma_ancho: null,
+  firma_alto: null,
 };
 
 // ---------------------------------------------------------------------------

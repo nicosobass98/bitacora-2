@@ -133,6 +133,116 @@ function CopiaEnFichero() {
   );
 }
 
+/** Lee un fichero de imagen y devuelve su data URL junto con sus dimensiones reales. */
+function leeImagen(fichero: File): Promise<{ dataUrl: string; ancho: number; alto: number }> {
+  return new Promise((resolver, rechazar) => {
+    const lector = new FileReader();
+    lector.onerror = () => rechazar(new Error('No se ha podido leer la imagen'));
+    lector.onload = () => {
+      const dataUrl = String(lector.result);
+      const imagen = new Image();
+      imagen.onerror = () => rechazar(new Error('El fichero no es una imagen válida'));
+      imagen.onload = () => resolver({ dataUrl, ancho: imagen.naturalWidth, alto: imagen.naturalHeight });
+      imagen.src = dataUrl;
+    };
+    lector.readAsDataURL(fichero);
+  });
+}
+
+/**
+ * Datos del técnico y firma, usados al generar el parte semanal
+ * (`informes/parteSemanal.ts`). Se guardan solo en Ajustes: nunca se
+ * sincronizan, ni salen en la copia de seguridad de §Copia en fichero — son
+ * datos personales que no tienen por qué viajar a otro dispositivo.
+ */
+function DatosParteSemanal() {
+  const { datos: ajustes } = useConsulta(leeAjustes, ['ajustes']);
+  const entrada = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function eligeFirma(fichero: File | undefined) {
+    if (!fichero) return;
+    setError(null);
+    try {
+      const { dataUrl, ancho, alto } = await leeImagen(fichero);
+      await guardaAjustes({ firma_imagen: dataUrl, firma_ancho: ancho, firma_alto: alto });
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : String(fallo));
+    } finally {
+      if (entrada.current) entrada.current.value = '';
+    }
+  }
+
+  return (
+    <div className="seccion">
+      <h2>Datos para el parte semanal</h2>
+      <p className="suave">
+        Se usan al generar el parte de la semana (§Historial → Parte semanal). Solo se guardan en
+        este dispositivo.
+      </p>
+
+      <label className="campo">
+        <span>Nombre completo</span>
+        <input
+          value={ajustes?.nombre_tecnico ?? ''}
+          onChange={(evento) => void guardaAjustes({ nombre_tecnico: evento.target.value })}
+        />
+      </label>
+      <label className="campo">
+        <span>Categoría profesional</span>
+        <input
+          value={ajustes?.categoria_profesional ?? ''}
+          placeholder="Oficial 1ª"
+          onChange={(evento) => void guardaAjustes({ categoria_profesional: evento.target.value })}
+        />
+      </label>
+      <label className="campo">
+        <span>Nº de identificación fiscal</span>
+        <input
+          value={ajustes?.nif ?? ''}
+          onChange={(evento) => void guardaAjustes({ nif: evento.target.value })}
+        />
+      </label>
+
+      <label className="campo">
+        <span>Firma</span>
+        {ajustes?.firma_imagen ? (
+          <div className="tarjeta">
+            <img
+              src={ajustes.firma_imagen}
+              alt="Firma"
+              style={{ maxWidth: '100%', maxHeight: 80, display: 'block' }}
+            />
+            <button
+              className="boton plano"
+              onClick={() =>
+                void guardaAjustes({ firma_imagen: null, firma_ancho: null, firma_alto: null })
+              }
+            >
+              Quitar firma
+            </button>
+          </div>
+        ) : (
+          <button className="boton ancho" onClick={() => entrada.current?.click()}>
+            Subir una foto de mi firma
+          </button>
+        )}
+      </label>
+      <input
+        ref={entrada}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(evento) => void eligeFirma(evento.target.files?.[0])}
+      />
+      {error && <p className="aviso rojo">{error}</p>}
+      <p className="suave">
+        Sin firma, el parte deja una línea en blanco para firmar a mano: nunca se inventa una.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Ajustes y estado real de la sincronización.
  *
@@ -296,6 +406,8 @@ export function Ajustes() {
             </ul>
           )}
         </div>
+
+        <DatosParteSemanal />
 
         <div className="seccion">
           <h2>Jornadas olvidadas</h2>
