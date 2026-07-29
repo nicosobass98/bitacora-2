@@ -39,6 +39,9 @@ local por `http://` no: entrando desde el móvil a `http://192.168.x.x:5173` la 
 se ve, pero no se instala ni cachea — o sea, ni icono en el escritorio ni arranque
 sin cobertura. Por eso se publica por HTTPS en GitHub Pages.
 
+Pages es gratuito en repositorios **públicos**; desde uno privado exige plan de
+pago. Ver más abajo por qué publicar el código no publica los datos.
+
 **Una vez, en el repositorio:** *Settings → Pages → Build and deployment →
 Source: **GitHub Actions***. No hay que elegir rama.
 
@@ -49,6 +52,46 @@ publica solo en cada `push` a `main`. Para publicar desde una rama sin fusionarl
 Queda servida en `https://nicosobass98.github.io/bitacora-2/`. Desde Chrome en
 Android: menú → **Añadir a pantalla de inicio**. Se abre a pantalla completa, y al
 mantener pulsado el icono aparecen los atajos «Abrir jornada» y «Nueva nota».
+
+## Privacidad: el código es público, los datos no
+
+Publicar el repositorio publica **el programa**, no lo que se apunta con él. Es
+la diferencia entre publicar los planos de una libreta y publicar la libreta.
+
+Los datos se guardan en dos sitios, y ninguno es GitHub:
+
+1. **IndexedDB, en el móvil.** Es la fuente de verdad. Vive dentro del navegador
+   del teléfono y no sale de ahí salvo que se envíe a Drive a propósito.
+2. **Una hoja en el Google Drive del usuario**, solo si se conecta Drive. La crea
+   la app dentro de esa cuenta y nace privada, como cualquier fichero de Drive.
+
+Que la web esté publicada significa que un desconocido puede abrir la URL y ver
+**la app vacía**: su propio IndexedDB en blanco, en su propio dispositivo. No hay
+servidor común, ni base de datos compartida, ni cuentas. Es consecuencia directa
+de las decisiones de §2 y §9 —un solo usuario, sin servidor propio—: no existe el
+sitio donde estarían los datos para que alguien pudiera mirarlos.
+
+Si ese desconocido pulsara «Conectar con Google», entraría con **su** cuenta y se
+crearía **su** hoja. El Client ID que va en la app no es una contraseña: en
+cualquier aplicación de navegador es público por diseño, y no da acceso a nada
+ajeno. Lo que acota su uso es la lista de orígenes autorizados.
+
+Esto es comprobable, no una promesa. La app solo habla con dos dominios, y con
+ninguno más: `accounts.google.com` para el acceso y `sheets.googleapis.com` para
+la copia. No hay analítica, ni telemetría, ni servidor propio. Se verifica con:
+
+```bash
+grep -rn "fetch(\|XMLHttpRequest\|sendBeacon" src/   # una sola llamada, en sync/drive.ts
+```
+
+Los tres bordes que sí hay que respetar:
+
+- **No meter nunca un fichero de datos en el repositorio.** La app no lo hace ni
+  puede hacerlo: no existe ninguna función que escriba jornadas en el código.
+- **El `.env` está en `.gitignore`.** No se sube. Solo se versiona
+  `.env.example`, que va vacío.
+- **El enlace de la hoja de Drive** sí abre los datos a quien lo tenga si se
+  cambian los permisos de la hoja. Por defecto es privada: no compartirla.
 
 ## Conectar la copia en Google Sheets
 
