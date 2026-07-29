@@ -1,0 +1,509 @@
+/*
+ * Interfaz pensada para usarse de pie, con una mano, con guantes y con mala luz.
+ * De ahí las áreas táctiles grandes y una sola acción dominante por pantalla.
+ */
+
+:root {
+  --fondo: #0f1115;
+  --superficie: #171a21;
+  --superficie-alta: #1f232c;
+  --borde: #2a2f3a;
+  --texto: #e8eaee;
+  --texto-suave: #99a0ae;
+  --acento: #4a9eff;
+  --acento-oscuro: #1d4e82;
+  --verde: #3ecf8e;
+  --ambar: #f0a52e;
+  --rojo: #f2544b;
+  --radio: 14px;
+  --toque: 56px;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.contenido {
+  flex: 1;
+  padding: 16px 16px 96px;
+}
+
+/* --- Cabecera ------------------------------------------------------------ */
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borde);
+  position: sticky;
+  top: 0;
+  background: var(--fondo);
+  z-index: 10;
+}
+
+.cabecera h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.volver {
+  background: none;
+  border: none;
+  color: var(--texto-suave);
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+/* --- Acción dominante (§5.1) --------------------------------------------- */
+
+.accion-dominante {
+  width: 100%;
+  min-height: 140px;
+  border: none;
+  border-radius: var(--radio);
+  background: linear-gradient(160deg, var(--acento), var(--acento-oscuro));
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+}
+
+.accion-dominante.cerrar {
+  background: linear-gradient(160deg, #e07a2b, #8a4413);
+}
+
+.accion-dominante .subtitulo {
+  font-size: 0.95rem;
+  font-weight: 500;
+  opacity: 0.9;
+  letter-spacing: 0;
+}
+
+/* --- Botones ------------------------------------------------------------- */
+
+.boton {
+  min-height: var(--toque);
+  padding: 12px 18px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--superficie-alta);
+  color: var(--texto);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.boton.primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #06121f;
+}
+
+.boton.peligro {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+
+.boton.plano {
+  background: none;
+  border: none;
+  color: var(--acento);
+  min-height: auto;
+  padding: 8px 0;
+  font-weight: 500;
+}
+
+.boton.ancho {
+  width: 100%;
+}
+
+.rejilla-botones {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.rejilla-botones .boton {
+  min-height: 72px;
+}
+
+.rejilla-botones .boton[aria-pressed='true'] {
+  border-color: var(--acento);
+  background: var(--acento-oscuro);
+  color: #fff;
+}
+
+.fila-botones {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.fila-botones .boton {
+  flex: 1;
+}
+
+/* --- Formularios --------------------------------------------------------- */
+
+.campo {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.campo > span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  min-height: var(--toque);
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+/* --- Tarjetas y listas --------------------------------------------------- */
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.tarjeta.pulsable {
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.seccion {
+  margin-top: 28px;
+}
+
+.seccion > h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-suave);
+  margin: 0 0 10px;
+}
+
+.vacio {
+  color: var(--texto-suave);
+  padding: 24px 4px;
+  text-align: center;
+}
+
+.suave {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.linea-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  color: var(--texto-suave);
+  font-size: 0.88rem;
+}
+
+.etiqueta-pastilla {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde);
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.etiqueta-pastilla.aviso {
+  border-color: var(--ambar);
+  color: var(--ambar);
+}
+
+.etiqueta-pastilla.alerta {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+
+/* --- Estado de sincronización (§7) --------------------------------------- */
+
+.estado-sync {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--texto-suave);
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 10px 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.punto.verde {
+  background: var(--verde);
+}
+.punto.ambar {
+  background: var(--ambar);
+}
+.punto.rojo {
+  background: var(--rojo);
+}
+.punto.gris {
+  background: var(--texto-suave);
+}
+
+/* --- Aviso ---------------------------------------------------------------- */
+
+.aviso {
+  border: 1px solid var(--ambar);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: rgba(240, 165, 46, 0.08);
+}
+
+.aviso.rojo {
+  border-color: var(--rojo);
+  background: rgba(242, 84, 75, 0.08);
+}
+
+.aviso h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+/* --- Botón flotante de nota (§5.5) --------------------------------------- */
+
+.fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  /* Por encima de la barra de navegación: si no, tapa la pestaña de Notas. */
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--acento);
+  color: #06121f;
+  font-size: 1.9rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+/* --- Autocompletado de ubicación ----------------------------------------- */
+
+.sugerencias {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.sugerencias li + li {
+  border-top: 1px solid var(--borde);
+}
+
+.sugerencias button {
+  width: 100%;
+  min-height: var(--toque);
+  text-align: left;
+  background: var(--superficie);
+  border: none;
+  color: var(--texto);
+  font: inherit;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.sugerencias .crear {
+  color: var(--acento);
+  font-weight: 600;
+}
+
+/* --- Línea de tiempo (§5.6) ---------------------------------------------- */
+
+.linea-tiempo {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  border-left: 2px solid var(--borde);
+}
+
+.linea-tiempo li {
+  position: relative;
+  padding: 0 0 20px 16px;
+}
+
+.linea-tiempo li::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--acento);
+  border: 2px solid var(--fondo);
+}
+
+.linea-tiempo li.es-nota::before {
+  background: var(--ambar);
+}
+
+/* --- Navegación inferior -------------------------------------------------- */
+
+.navegacion {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--superficie);
+  border-top: 1px solid var(--borde);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.navegacion a {
+  padding: 12px 4px;
+  text-align: center;
+  color: var(--texto-suave);
+  text-decoration: none;
+  font-size: 0.75rem;
+  min-height: var(--toque);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+}
+
+.navegacion a.activo {
+  color: var(--acento);
+}
+
+.navegacion .icono {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* --- Diálogo de confirmación (§7: nada destructivo sin confirmar) --------- */
+
+.velo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 30;
+}
+
+.dialogo {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.dialogo h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
