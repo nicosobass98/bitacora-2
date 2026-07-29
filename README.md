@@ -53,6 +53,37 @@ Queda servida en `https://nicosobass98.github.io/bitacora-2/`. Desde Chrome en
 Android: menú → **Añadir a pantalla de inicio**. Se abre a pantalla completa, y al
 mantener pulsado el icono aparecen los atajos «Abrir jornada» y «Nueva nota».
 
+## Copia de seguridad en un fichero
+
+*Ajustes → Copia de seguridad → Exportar* guarda un `.json` con las tres
+colecciones. *Importar* lo devuelve.
+
+Importar **mezcla, no sustituye**: nunca borra lo que ya hay, y ante el mismo
+`id` se queda con el `actualizado_en` más reciente. Como los ids son UUID
+generados en el móvil, importar dos veces el mismo fichero no duplica nada — la
+misma idempotencia en la que se apoya la cola outbox (§4). Un fichero que no se
+entienda se rechaza entero, diciendo por qué, en vez de aplicar «lo que se
+pueda».
+
+Los ajustes no van en la copia: el id de la hoja de cálculo no debe viajar a
+otro dispositivo, o dos móviles escribirían en la misma hoja pisándose las filas.
+
+Esto cubre dos casos que la copia en Sheets no cubre:
+
+- **Funciona sin nada**: sin cuenta de Google, sin alta en Google Cloud y sin red.
+- **En iOS es la única forma de mover los datos** entre la web abierta en Safari
+  y la misma web añadida a la pantalla de inicio. No comparten IndexedDB, así
+  que lo apuntado en una no aparece en la otra.
+
+### Nota sobre iOS
+
+La especificación está escrita para Android. En iPhone hay tres diferencias:
+
+- Se instala desde **Safari** → Compartir → *Añadir a pantalla de inicio*.
+- Los `shortcuts` del manifiesto no existen: iOS no los lee.
+- iOS es más agresivo desalojando el almacenamiento de las webs. En un sistema
+  cuya fuente de verdad es el dispositivo, exportar deja de ser opcional.
+
 ## Privacidad: el código es público, los datos no
 
 Publicar el repositorio publica **el programa**, no lo que se apunta con él. Es

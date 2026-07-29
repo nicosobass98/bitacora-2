@@ -1,11 +1,137 @@
-import { useEffect, useState } from 'react';
-import { BotonSincronizar, Cabecera } from '../ui/componentes';
+import { useEffect, useRef, useState } from 'react';
+import { BotonSincronizar, Cabecera, Confirmacion } from '../ui/componentes';
 import { useConsulta, useEstadoSync } from '../ui/hooks';
 import { guardaAjustes, leeAjustes } from '../db/repos';
 import { reintentaFallidos, todosLosElementos } from '../db/outbox';
 import { conectaGoogle, vaciaCola } from '../sync/sincronizador';
 import { cierraSesion, configuraCliente, obtenToken } from '../sync/google';
 import { creaDocumento, existeDocumento, urlDocumento } from '../sync/drive';
+import {
+  aplicaRespaldo,
+  construyeRespaldo,
+  entregaRespaldo,
+  leeRespaldo,
+  totalRegistros,
+  type Respaldo,
+  type ResumenImportacion,
+} from '../db/respaldo';
+import { COLECCIONES } from '../domain/tipos';
+
+/**
+ * Copia de seguridad en un fichero.
+ *
+ * Va la primera porque es lo único que protege los datos sin depender de nada:
+ * ni cuenta de Google, ni red, ni que el sistema respete el almacenamiento del
+ * navegador. En iOS también es la única forma de mover los datos entre la web
+ * abierta en Safari y la misma web añadida a la pantalla de inicio, que no
+ * comparten IndexedDB.
+ */
+function CopiaEnFichero() {
+  const entrada = useRef<HTMLInputElement>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resumen, setResumen] = useState<ResumenImportacion | null>(null);
+  const [porConfirmar, setPorConfirmar] = useState<Respaldo | null>(null);
+
+  async function exportar() {
+    setOcupado(true);
+    setError(null);
+    setResumen(null);
+    try {
+      const respaldo = await construyeRespaldo();
+      if (totalRegistros(respaldo) === 0) {
+        setError('No hay nada que guardar todavía.');
+        return;
+      }
+      await entregaRespaldo(respaldo);
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : String(fallo));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function eligeFichero(fichero: File | undefined) {
+    if (!fichero) return;
+    setError(null);
+    setResumen(null);
+    try {
+      setPorConfirmar(leeRespaldo(await fichero.text()));
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : String(fallo));
+    } finally {
+      // Permite volver a elegir el mismo fichero si hubo que corregir algo.
+      if (entrada.current) entrada.current.value = '';
+    }
+  }
+
+  return (
+    <div className="seccion">
+      <h2>Copia de seguridad</h2>
+      <p className="suave">
+        Guarda un fichero con todo. Importar mezcla: nunca borra lo que ya hay, y ante el mismo
+        registro se queda con la versión más reciente.
+      </p>
+
+      <div className="fila-botones">
+        <button className="boton" disabled={ocupado} onClick={() => void exportar()}>
+          Exportar
+        </button>
+        <button
+          className="boton"
+          disabled={ocupado}
+          onClick={() => entrada.current?.click()}
+        >
+          Importar
+        </button>
+      </div>
+
+      <input
+        ref={entrada}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: 'none' }}
+        onChange={(evento) => void eligeFichero(evento.target.files?.[0])}
+      />
+
+      {error && <p className="aviso rojo">{error}</p>}
+
+      {resumen && (
+        <div className="tarjeta">
+          <strong>Copia importada</strong>
+          {COLECCIONES.map((coleccion) => (
+            <div className="suave" key={coleccion}>
+              {coleccion}: {resumen[coleccion].nuevos} nuevos,{' '}
+              {resumen[coleccion].actualizados} actualizados, {resumen[coleccion].omitidos} ya
+              estaban al día
+            </div>
+          ))}
+        </div>
+      )}
+
+      {porConfirmar && (
+        <Confirmacion
+          titulo={`¿Importar ${totalRegistros(porConfirmar)} registros?`}
+          detalle={`Copia del ${porConfirmar.exportado_en.slice(0, 10)}. Se añade a lo que ya tienes; nada se borra.`}
+          textoConfirmar="Importar"
+          onCancelar={() => setPorConfirmar(null)}
+          onConfirmar={async () => {
+            const respaldo = porConfirmar;
+            setPorConfirmar(null);
+            setOcupado(true);
+            try {
+              setResumen(await aplicaRespaldo(respaldo));
+            } catch (fallo) {
+              setError(fallo instanceof Error ? fallo.message : String(fallo));
+            } finally {
+              setOcupado(false);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
 
 /**
  * Ajustes y estado real de la sincronización.
@@ -45,6 +171,8 @@ export function Ajustes() {
     <>
       <Cabecera titulo="Ajustes" />
       <div className="contenido">
+        <CopiaEnFichero />
+
         <div className="seccion">
           <h2>Copia en Google Sheets</h2>
 
