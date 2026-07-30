@@ -79,3 +79,56 @@ describe('migración de esquema v1 → v2', () => {
     bd.close();
   });
 });
+
+describe('migración de esquema v2 → v3', () => {
+  it('convierte tipo_horas "extra" en "normal": ahora se calcula solo', async () => {
+    // Simula una base de la v2, de cuando "extra" todavía era una marca manual.
+    const vieja = await openDB(NOMBRE_BD, 2, {
+      upgrade(bd) {
+        const jornadas = bd.createObjectStore('jornadas', { keyPath: 'id' });
+        jornadas.createIndex('por-fecha', 'fecha');
+        jornadas.createIndex('por-ubicacion', 'ubicacion_id');
+        jornadas.createIndex('por-estado', 'estado');
+        bd.createObjectStore('ubicaciones', { keyPath: 'id' });
+        bd.createObjectStore('notas', { keyPath: 'id' });
+        bd.createObjectStore('outbox', { keyPath: 'id' });
+        bd.createObjectStore('ajustes', { keyPath: 'clave' });
+        bd.createObjectStore('guardias', { keyPath: 'inicio' });
+      },
+    });
+    await vieja.put('jornadas', {
+      id: 'j-extra',
+      fecha: '2026-01-10',
+      hora_inicio: '2026-01-10T08:00:00+01:00',
+      hora_fin: '2026-01-10T20:00:00+01:00',
+      ubicacion_id: null,
+      motivo: null,
+      sistema: null,
+      notas: '',
+      estado: 'cerrada',
+      tipo_horas: 'extra',
+      actualizado_en: '2026-01-10T20:00:00+01:00',
+    });
+    await vieja.put('jornadas', {
+      id: 'j-guardia',
+      fecha: '2026-01-11',
+      hora_inicio: '2026-01-11T02:00:00+01:00',
+      hora_fin: '2026-01-11T03:00:00+01:00',
+      ubicacion_id: null,
+      motivo: null,
+      sistema: null,
+      notas: '',
+      estado: 'cerrada',
+      tipo_horas: 'guardia',
+      actualizado_en: '2026-01-11T03:00:00+01:00',
+    });
+    vieja.close();
+
+    const bd = await abrirBD();
+    expect(bd.version).toBe(VERSION_BD);
+    expect((await bd.get('jornadas', 'j-extra'))?.tipo_horas).toBe('normal');
+    // Una salida de guardia no se toca: sigue siendo guardia.
+    expect((await bd.get('jornadas', 'j-guardia'))?.tipo_horas).toBe('guardia');
+    bd.close();
+  });
+});

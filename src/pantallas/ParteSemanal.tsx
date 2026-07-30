@@ -10,6 +10,7 @@ import {
   todasLasUbicaciones,
 } from '../db/repos';
 import {
+  duracionMinutos,
   finSemana,
   formateaFechaCorta,
   formateaFechaLarga,
@@ -19,6 +20,7 @@ import {
   sumaDias,
 } from '../domain/tiempo';
 import { ETIQUETA_MOTIVO, ETIQUETA_TIPO_HORAS } from '../domain/tipos';
+import { formateaHorasExtra, horarioDesdeAjustes, minutosExtraAutomaticos } from '../domain/horario';
 
 /**
  * Genera el parte de trabajo de una semana (lunes a domingo) en `.docx`,
@@ -52,6 +54,20 @@ export function ParteSemanal() {
   const porCompletar = jornadas.filter(
     (j) => j.estado !== 'abierta' && !(j.ubicacion_id && j.motivo && j.hora_fin),
   );
+  const horario = datos ? horarioDesdeAjustes(datos.ajustes) : null;
+
+  /** Mismo cálculo que usará el documento, para verlo antes de descargar. */
+  function horasExtraDe(jornada: (typeof jornadas)[number]): string {
+    if (!horario) return '';
+    const minutos =
+      jornada.tipo_horas === 'guardia'
+        ? Math.max(
+            duracionMinutos(jornada.hora_inicio, jornada.hora_fin) ?? 0,
+            datos?.ajustes.minutos_minimos_guardia ?? 0,
+          )
+        : minutosExtraAutomaticos(jornada.hora_inicio, jornada.hora_fin, horario);
+    return minutos > 0 ? formateaHorasExtra(minutos) : '';
+  }
 
   async function generar() {
     if (!datos || generando) return;
@@ -65,7 +81,12 @@ export function ParteSemanal() {
         '../informes/parteSemanal'
       );
       const porId = new Map(datos.ubicaciones.map((u) => [u.id, u]));
-      const filas = construyeFilas(jornadas, porId, datos.ajustes.minutos_minimos_guardia);
+      const filas = construyeFilas(
+        jornadas,
+        porId,
+        horarioDesdeAjustes(datos.ajustes),
+        datos.ajustes.minutos_minimos_guardia,
+      );
       const blob = await construyeParteSemanal({
         inicio,
         fin,
@@ -161,13 +182,15 @@ export function ParteSemanal() {
           ) : (
             <>
               <p className="suave">
-                Toca una jornada para marcarla como hora extra o salida de guardia.
+                Las horas extra se calculan solas con tu horario (Ajustes). Toca una jornada para
+                marcarla como salida de guardia.
               </p>
               <ul className="lista">
                 {jornadas.map((jornada) => {
                   const ubicacion = jornada.ubicacion_id
                     ? datos?.ubicaciones.find((u) => u.id === jornada.ubicacion_id)
                     : undefined;
+                  const horasExtra = horasExtraDe(jornada);
                   return (
                     <li key={jornada.id}>
                       <button
@@ -181,12 +204,13 @@ export function ParteSemanal() {
                             {horaDe(jornada.hora_inicio)}–{horaDe(jornada.hora_fin)}
                           </span>
                           {jornada.motivo && <span>{ETIQUETA_MOTIVO[jornada.motivo]}</span>}
-                          {jornada.tipo_horas !== 'normal' && (
-                            <span
-                              className={`etiqueta-pastilla ${jornada.tipo_horas === 'guardia' ? 'alerta' : 'aviso'}`}
-                            >
-                              {ETIQUETA_TIPO_HORAS[jornada.tipo_horas]}
+                          {jornada.tipo_horas === 'guardia' && (
+                            <span className="etiqueta-pastilla alerta">
+                              {ETIQUETA_TIPO_HORAS.guardia}
                             </span>
+                          )}
+                          {horasExtra && (
+                            <span className="etiqueta-pastilla aviso">+{horasExtra} h extra</span>
                           )}
                         </div>
                       </button>
