@@ -113,7 +113,7 @@ export function formateaDuracion(minutos: number | null): string {
   return `${h} h ${m} min`;
 }
 
-const MESES = [
+export const MESES = [
   'enero',
   'febrero',
   'marzo',
@@ -149,7 +149,7 @@ export function horasDesde(instante: InstanteISO, referencia: Date = new Date())
  * convertirlo de vuelta a componentes locales — el mismo error que `tiempo.ts`
  * evita en todas partes con los instantes completos.
  */
-function aFechaLocal(fecha: FechaISO): Date {
+export function aFechaLocal(fecha: FechaISO): Date {
   const [anio, mes, dia] = fecha.split('-').map(Number);
   return new Date(anio ?? 1970, (mes ?? 1) - 1, dia ?? 1);
 }

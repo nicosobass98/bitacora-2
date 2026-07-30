@@ -132,11 +132,11 @@ export function EditarJornada({ id }: { id: string }) {
               </button>
             ))}
           </div>
-          {borrador.tipo_horas === 'guardia' && (
-            <p className="suave">
-              Cuenta como mínimo el umbral de guardia de Ajustes, aunque haya durado menos.
-            </p>
-          )}
+          <p className="suave">
+            {borrador.tipo_horas === 'guardia'
+              ? 'Cuenta como mínimo el umbral de guardia de Ajustes, aunque haya durado menos.'
+              : 'Las horas extra se calculan solas comparando con tu horario habitual (Ajustes).'}
+          </p>
         </div>
 
         <label className="campo">

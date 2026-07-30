@@ -10,7 +10,7 @@ import type { ElementoOutbox, Jornada, Nota, SemanaGuardia, Ubicacion } from '..
  */
 
 export const NOMBRE_BD = 'bitacora';
-export const VERSION_BD = 2;
+export const VERSION_BD = 3;
 
 interface EsquemaBitacora extends DBSchema {
   jornadas: {
@@ -96,6 +96,23 @@ export function abrirBD(): Promise<BD> {
             const valor = cursor.value as unknown as Record<string, unknown>;
             if (!('tipo_horas' in valor)) {
               await cursor.update({ ...valor, tipo_horas: 'normal' } as Jornada);
+            }
+            cursor = await cursor.continue();
+          }
+        }
+        if (versionAnterior < 3) {
+          // `tipo_horas: 'extra'` desaparece: a partir de esta versión, las
+          // horas extra de una jornada normal se calculan solas comparándola
+          // con el horario habitual (`domain/horario.ts`), en vez de marcarse
+          // a mano. Lo que estaba marcado como 'extra' vuelve a 'normal' — el
+          // cálculo automático es más preciso que la marca manual que
+          // sustituye, no una pérdida de información.
+          const almacen = tx.objectStore('jornadas');
+          let cursor = await almacen.openCursor();
+          while (cursor) {
+            const valor = cursor.value as unknown as { tipo_horas?: string };
+            if (valor.tipo_horas === 'extra') {
+              await cursor.update({ ...cursor.value, tipo_horas: 'normal' } as Jornada);
             }
             cursor = await cursor.continue();
           }

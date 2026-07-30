@@ -15,7 +15,8 @@ import {
   type Respaldo,
   type ResumenImportacion,
 } from '../db/respaldo';
-import { COLECCIONES } from '../domain/tipos';
+import { COLECCIONES, type Ajustes as TipoAjustes } from '../domain/tipos';
+import { MESES } from '../domain/tiempo';
 
 /**
  * Copia de seguridad en un fichero.
@@ -243,6 +244,125 @@ function DatosParteSemanal() {
   );
 }
 
+/** Un par de campos de hora, para un tramo del horario laboral. */
+function CampoTramo({
+  etiqueta,
+  inicio,
+  fin,
+  onCambia,
+}: {
+  etiqueta: string;
+  inicio: string;
+  fin: string;
+  onCambia: (cambios: { inicio?: string; fin?: string }) => void;
+}) {
+  return (
+    <div className="campo">
+      <span>{etiqueta}</span>
+      <div className="fila-botones">
+        <input type="time" value={inicio} onChange={(e) => onCambia({ inicio: e.target.value })} />
+        <input type="time" value={fin} onChange={(e) => onCambia({ fin: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Horario habitual, para que el parte semanal calcule solo las horas normales
+ * y extra (`domain/horario.ts`) en vez de marcarlas a mano.
+ */
+function HorarioLaboralAjustes({ ajustes }: { ajustes: TipoAjustes | undefined }) {
+  if (!ajustes) return null;
+
+  return (
+    <div className="seccion">
+      <h2>Horario laboral</h2>
+      <p className="suave">
+        El parte semanal compara cada jornada con este horario: lo que cae fuera cuenta como hora
+        extra sin que haya que marcarlo. Cambia si cambia tu contrato o el convenio.
+      </p>
+
+      <label className="campo">
+        <span>Jornada intensiva de verano, del mes… al mes…</span>
+        <div className="fila-botones">
+          <select
+            value={ajustes.horario_verano_mes_inicio}
+            onChange={(e) => void guardaAjustes({ horario_verano_mes_inicio: Number(e.target.value) })}
+          >
+            {MESES.map((nombre, i) => (
+              <option key={nombre} value={i + 1}>
+                {nombre}
+              </option>
+            ))}
+          </select>
+          <select
+            value={ajustes.horario_verano_mes_fin}
+            onChange={(e) => void guardaAjustes({ horario_verano_mes_fin: Number(e.target.value) })}
+          >
+            {MESES.map((nombre, i) => (
+              <option key={nombre} value={i + 1}>
+                {nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      </label>
+      <CampoTramo
+        etiqueta="Horario en jornada intensiva (todos los días laborables)"
+        inicio={ajustes.horario_verano_inicio}
+        fin={ajustes.horario_verano_fin}
+        onCambia={(c) =>
+          void guardaAjustes({
+            ...(c.inicio && { horario_verano_inicio: c.inicio }),
+            ...(c.fin && { horario_verano_fin: c.fin }),
+          })
+        }
+      />
+
+      <p className="suave" style={{ marginTop: 16 }}>
+        El resto del año:
+      </p>
+      <CampoTramo
+        etiqueta="Lunes a jueves, mañana"
+        inicio={ajustes.horario_lj_manana_inicio}
+        fin={ajustes.horario_lj_manana_fin}
+        onCambia={(c) =>
+          void guardaAjustes({
+            ...(c.inicio && { horario_lj_manana_inicio: c.inicio }),
+            ...(c.fin && { horario_lj_manana_fin: c.fin }),
+          })
+        }
+      />
+      <CampoTramo
+        etiqueta="Lunes a jueves, tarde"
+        inicio={ajustes.horario_lj_tarde_inicio}
+        fin={ajustes.horario_lj_tarde_fin}
+        onCambia={(c) =>
+          void guardaAjustes({
+            ...(c.inicio && { horario_lj_tarde_inicio: c.inicio }),
+            ...(c.fin && { horario_lj_tarde_fin: c.fin }),
+          })
+        }
+      />
+      <CampoTramo
+        etiqueta="Viernes"
+        inicio={ajustes.horario_viernes_inicio}
+        fin={ajustes.horario_viernes_fin}
+        onCambia={(c) =>
+          void guardaAjustes({
+            ...(c.inicio && { horario_viernes_inicio: c.inicio }),
+            ...(c.fin && { horario_viernes_fin: c.fin }),
+          })
+        }
+      />
+      <p className="suave">
+        Sábado y domingo no tienen horario: cualquier jornada esos días cuenta entera como hora
+        extra, salvo que ya sea una salida de guardia.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Ajustes y estado real de la sincronización.
  *
@@ -430,6 +550,8 @@ export function Ajustes() {
             inventada en un parte es peor que una jornada abierta.
           </p>
         </div>
+
+        <HorarioLaboralAjustes ajustes={ajustes} />
 
         <div className="seccion">
           <h2>Salidas de guardia</h2>

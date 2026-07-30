@@ -30,19 +30,19 @@ export type EstadoJornada = (typeof ESTADOS_JORNADA)[number];
  * Clasificación de la jornada para el parte semanal (`informes/parteSemanal.ts`).
  * No es lo mismo que `motivo` (qué se hizo): esto es cómo se compensa.
  *
- * - `normal` — dentro del horario habitual. No sale en la columna de horas extra.
- * - `extra` — fuera de horario, pero no una salida de guardia. Cuenta la
- *   duración real de la jornada.
+ * - `normal` — el parte calcula solo lo que cae fuera del horario habitual
+ *   (`domain/horario.ts`) y lo cuenta como hora extra; lo que cae dentro no
+ *   sale en esa columna. No hay que marcar nada a mano para esto.
  * - `guardia` — salida de guardia: una llamada durante el turno de guardia.
- *   Cuenta como mínimo `minutos_minimos_guardia` (Ajustes), aunque se haya
- *   resuelto en menos tiempo — eso lo decide el convenio, no Bitácora.
+ *   Siempre es hora extra, cuente lo que cuente el horario ese día, y como
+ *   mínimo `minutos_minimos_guardia` (Ajustes) aunque se haya resuelto antes
+ *   — eso lo decide el convenio, no Bitácora.
  */
-export const TIPOS_HORAS = ['normal', 'extra', 'guardia'] as const;
+export const TIPOS_HORAS = ['normal', 'guardia'] as const;
 export type TipoHoras = (typeof TIPOS_HORAS)[number];
 
 export const ETIQUETA_TIPO_HORAS: Record<TipoHoras, string> = {
-  normal: 'Horas normales',
-  extra: 'Horas extra',
+  normal: 'Horario habitual',
   guardia: 'Salida de guardia',
 };
 
@@ -171,6 +171,22 @@ export interface Ajustes {
   firma_alto: number | null;
   /** Mínimo que cuenta una salida de guardia, en minutos. El convenio lo fija, no Bitácora. */
   minutos_minimos_guardia: number;
+  /**
+   * Horario habitual, para que el parte calcule solo las horas normales/extra
+   * (`domain/horario.ts`). Primer y último mes (1-12) de la jornada intensiva
+   * de verano; el resto del año se aplica el turno partido de lunes a jueves
+   * y la jornada continua de los viernes.
+   */
+  horario_verano_mes_inicio: number;
+  horario_verano_mes_fin: number;
+  horario_verano_inicio: string;
+  horario_verano_fin: string;
+  horario_lj_manana_inicio: string;
+  horario_lj_manana_fin: string;
+  horario_lj_tarde_inicio: string;
+  horario_lj_tarde_fin: string;
+  horario_viernes_inicio: string;
+  horario_viernes_fin: string;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -184,6 +200,16 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   firma_ancho: null,
   firma_alto: null,
   minutos_minimos_guardia: 180,
+  horario_verano_mes_inicio: 7,
+  horario_verano_mes_fin: 8,
+  horario_verano_inicio: '08:00',
+  horario_verano_fin: '14:30',
+  horario_lj_manana_inicio: '08:00',
+  horario_lj_manana_fin: '14:00',
+  horario_lj_tarde_inicio: '15:00',
+  horario_lj_tarde_fin: '17:30',
+  horario_viernes_inicio: '08:00',
+  horario_viernes_fin: '14:30',
 };
 
 // ---------------------------------------------------------------------------

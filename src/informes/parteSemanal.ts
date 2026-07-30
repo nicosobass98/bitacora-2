@@ -16,6 +16,7 @@ import {
 } from 'docx';
 import { ETIQUETA_MOTIVO, type Ajustes, type Jornada, type Ubicacion } from '../domain/tipos';
 import { duracionMinutos, formateaFechaLarga, horaDe } from '../domain/tiempo';
+import { formateaHorasExtra, minutosExtraAutomaticos, type HorarioLaboral } from '../domain/horario';
 
 /**
  * Genera el parte de trabajo semanal en `.docx`.
@@ -29,13 +30,16 @@ import { duracionMinutos, formateaFechaLarga, horaDe } from '../domain/tiempo';
  * apaisado, para que quepan todas.
  *
  * De las cuatro columnas de horas extra (H/E, H/F, P/N, C) solo se rellena
- * H/E, con lo que el usuario ha marcado en cada jornada (`tipo_horas`):
- * en blanco si es normal, la duración real si es «hora extra», y como mínimo
- * `minutos_minimos_guardia` (Ajustes) si es «salida de guardia» — el mínimo lo
- * fija el convenio, no Bitácora. Festivo, nocturnidad, dietas y VºBº se dejan
- * en blanco: son datos que la app no tiene forma de saber con certeza, y
- * rellenarlos igualmente sería el mismo dato falso que la especificación
- * evita en el resto de la app (§7).
+ * H/E, y no hace falta marcarla a mano: se calcula comparando la hora real
+ * de cada jornada con el horario habitual del usuario (`domain/horario.ts`,
+ * que cambia con el mes y el día de la semana). Lo que cae fuera de ese
+ * horario es hora extra. Una jornada marcada como «salida de guardia» es
+ * aparte: siempre es hora extra, y como mínimo `minutos_minimos_guardia`
+ * (Ajustes) aunque se haya resuelto antes — el mínimo lo fija el convenio, no
+ * Bitácora. Festivo, nocturnidad, dietas y VºBº se dejan en blanco: son datos
+ * que la app no tiene forma de saber con certeza, y rellenarlos igualmente
+ * sería el mismo dato falso que la especificación evita en el resto de la
+ * app (§7).
  */
 
 const ANCHO_PAGINA_A4 = 11906; // DXA, en vertical — docx-js lo intercambia con apaisado.
@@ -109,13 +113,6 @@ export interface FilaParte {
   trabajos: string;
 }
 
-/** `90` → `1:30`, `60` → `1`, `45` → `0:45`. Formato de la plantilla original. */
-export function formateaHorasExtra(minutos: number): string {
-  const horas = Math.floor(minutos / 60);
-  const resto = minutos % 60;
-  return resto === 0 ? `${horas}` : `${horas}:${String(resto).padStart(2, '0')}`;
-}
-
 /**
  * Construye las filas de datos a partir de las jornadas de la semana.
  *
@@ -123,14 +120,18 @@ export function formateaHorasExtra(minutos: number): string {
  * en el mismo mes — la misma convención que usaba la plantilla en papel, y
  * que evita repetir "-7" en cada fila de julio.
  *
- * `minutosMinimosGuardia` es el mínimo que compensa una salida de guardia
- * (Ajustes, `minutos_minimos_guardia`), aunque la llamada se resolviera en
- * menos tiempo. La hora de entrada y salida que se escribe en la fila es
- * siempre la real: solo la cifra de horas extra refleja el mínimo.
+ * La columna H/E no se marca a mano: una jornada `normal` cuenta solo lo que
+ * cae fuera del horario habitual ese día (`domain/horario.ts`), calculado a
+ * partir de la hora real de entrada y salida. Una `guardia` es siempre hora
+ * extra —cuente lo que cuente el horario ese día— y como mínimo
+ * `minutosMinimosGuardia` (Ajustes), aunque la llamada se resolviera antes.
+ * En los dos casos, la hora de entrada y salida que se escribe en la fila es
+ * siempre la real: solo la cifra de horas extra puede diferir de ella.
  */
 export function construyeFilas(
   jornadas: Jornada[],
   ubicaciones: ReadonlyMap<string, Ubicacion>,
+  horario: HorarioLaboral,
   minutosMinimosGuardia: number,
 ): FilaParte[] {
   let mesAnterior: number | null = null;
@@ -151,11 +152,10 @@ export function construyeFilas(
       .filter(Boolean)
       .join(' — ');
 
-    const minutosReales = duracionMinutos(jornada.hora_inicio, jornada.hora_fin) ?? 0;
-    const horasExtra =
-      jornada.tipo_horas === 'normal'
-        ? ''
-        : formateaHorasExtra(esGuardia ? Math.max(minutosReales, minutosMinimosGuardia) : minutosReales);
+    const minutosExtra = esGuardia
+      ? Math.max(duracionMinutos(jornada.hora_inicio, jornada.hora_fin) ?? 0, minutosMinimosGuardia)
+      : minutosExtraAutomaticos(jornada.hora_inicio, jornada.hora_fin, horario);
+    const horasExtra = minutosExtra > 0 ? formateaHorasExtra(minutosExtra) : '';
 
     return {
       fecha,

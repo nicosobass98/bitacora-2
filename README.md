@@ -213,15 +213,20 @@ no tienen por qué viajar a otro dispositivo.
 
 #### Horas extra y guardias
 
-Cada jornada se puede clasificar en la pantalla de edición («Horas»: Normal /
-Hora extra / Salida de guardia), igual que se completan el motivo o la
-ubicación — en frío, no al abrir.
+La columna H/E se calcula sola: se compara la hora de entrada y salida real de
+cada jornada con el horario habitual configurado en *Ajustes → Horario
+laboral* (jornada intensiva de verano, turno partido el resto del año, jornada
+continua los viernes — ver esa pantalla para los tramos exactos). Lo que cae
+fuera de esos tramos, incluido un hueco de turno partido o una jornada entera
+en fin de semana, cuenta como hora extra sin marcar nada a mano.
 
-- **Hora extra** — cuenta la duración real de la jornada en la columna H/E.
-- **Salida de guardia** — cuenta como mínimo lo que fije *Ajustes → Salidas de
-  guardia* (3 horas por defecto), aunque la llamada se haya resuelto antes. La
-  hora de entrada y salida que se escribe en el parte es siempre la real:
-  solo la cifra de horas extra refleja el mínimo del convenio.
+En la pantalla de edición («Horas») solo queda una decisión manual: si la
+jornada es una **salida de guardia**. Una salida de guardia cuenta siempre
+entera como hora extra — el horario habitual no le aplica — con un mínimo de
+lo que fije *Ajustes → Salidas de guardia* (3 horas por defecto), aunque la
+llamada se haya resuelto antes. La hora de entrada y salida que se escribe en
+el parte es siempre la real: solo la cifra de horas extra refleja el mínimo
+del convenio.
 
 Además, en *Parte semanal* se marca si esa semana entera es de guardia. Se
 pregunta en los dos sentidos y el documento lo dice explícitamente, «Sí» o
