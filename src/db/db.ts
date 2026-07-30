@@ -10,7 +10,7 @@ import type { ElementoOutbox, Jornada, Nota, SemanaGuardia, Ubicacion } from '..
  */
 
 export const NOMBRE_BD = 'bitacora';
-export const VERSION_BD = 4;
+export const VERSION_BD = 5;
 
 interface EsquemaBitacora extends DBSchema {
   jornadas: {
@@ -132,6 +132,20 @@ export function abrirBD(): Promise<BD> {
             const valor = cursor.value as unknown as { descripcion?: string; notas?: string };
             if (valor.descripcion === undefined) {
               await cursor.update({ ...cursor.value, descripcion: valor.notas ?? '' } as Jornada);
+            }
+            cursor = await cursor.continue();
+          }
+        }
+        if (versionAnterior < 5) {
+          // `dieta` es nuevo: las jornadas de antes de este esquema no tenían
+          // forma de marcarlo. 'ninguna' explícito, no `undefined` — igual que
+          // `tipo_horas` en la migración a la v2.
+          const almacen = tx.objectStore('jornadas');
+          let cursor = await almacen.openCursor();
+          while (cursor) {
+            const valor = cursor.value as unknown as { dieta?: string };
+            if (valor.dieta === undefined) {
+              await cursor.update({ ...cursor.value, dieta: 'ninguna' } as Jornada);
             }
             cursor = await cursor.continue();
           }

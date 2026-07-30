@@ -74,6 +74,7 @@ describe('migración de esquema v1 → v2', () => {
       notas: '',
       estado: 'abierta',
       tipo_horas: 'normal',
+      dieta: 'ninguna',
       actualizado_en: '2026-07-29T08:00:00+02:00',
     });
     expect((await bd.get('jornadas', 'j-nueva'))?.tipo_horas).toBe('normal');
@@ -174,6 +175,48 @@ describe('migración de esquema v3 → v4', () => {
     expect(migrada?.descripcion).toBe('Cambiada la fuente');
     // No se toca: sigue estando disponible tal cual, por si había algo privado mezclado.
     expect(migrada?.notas).toBe('Cambiada la fuente');
+    bd.close();
+  });
+});
+
+describe('migración de esquema v4 → v5', () => {
+  it('conserva las jornadas antiguas y les añade dieta: "ninguna"', async () => {
+    // Simula una base de la v4, de antes de que existiera el campo `dieta`.
+    const vieja = await openDB(NOMBRE_BD, 4, {
+      upgrade(bd) {
+        const jornadas = bd.createObjectStore('jornadas', { keyPath: 'id' });
+        jornadas.createIndex('por-fecha', 'fecha');
+        jornadas.createIndex('por-ubicacion', 'ubicacion_id');
+        jornadas.createIndex('por-estado', 'estado');
+        bd.createObjectStore('ubicaciones', { keyPath: 'id' });
+        bd.createObjectStore('notas', { keyPath: 'id' });
+        bd.createObjectStore('outbox', { keyPath: 'id' });
+        bd.createObjectStore('ajustes', { keyPath: 'clave' });
+        bd.createObjectStore('guardias', { keyPath: 'inicio' });
+      },
+    });
+    await vieja.put('jornadas', {
+      id: 'j-sin-dieta',
+      fecha: '2026-01-10',
+      hora_inicio: '2026-01-10T08:00:00+01:00',
+      hora_fin: '2026-01-10T14:00:00+01:00',
+      ubicacion_id: null,
+      motivo: null,
+      sistema: null,
+      descripcion: '',
+      notas: '',
+      estado: 'cerrada',
+      tipo_horas: 'normal',
+      actualizado_en: '2026-01-10T14:00:00+01:00',
+      // Sin `dieta`: así se guardaban las jornadas antes de esta versión.
+    });
+    vieja.close();
+
+    const bd = await abrirBD();
+    expect(bd.version).toBe(VERSION_BD);
+
+    const migrada = (await bd.get('jornadas', 'j-sin-dieta')) as Jornada | undefined;
+    expect(migrada?.dieta).toBe('ninguna');
     bd.close();
   });
 });

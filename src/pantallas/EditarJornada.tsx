@@ -13,13 +13,16 @@ import {
 import {
   ETIQUETA_MOTIVO,
   ETIQUETA_SISTEMA,
+  ETIQUETA_TIPO_DIETA,
   ETIQUETA_TIPO_HORAS,
   MOTIVOS,
   SISTEMAS,
+  TIPOS_DIETA,
   TIPOS_HORAS,
   type Jornada,
   type Motivo,
   type Sistema,
+  type TipoDieta,
   type TipoHoras,
 } from '../domain/tipos';
 
@@ -137,6 +140,23 @@ export function EditarJornada({ id }: { id: string }) {
               ? 'Cuenta como mínimo el umbral de guardia de Ajustes, aunque haya durado menos.'
               : 'Las horas extra se calculan solas comparando con tu horario habitual (Ajustes).'}
           </p>
+        </div>
+
+        <div className="campo">
+          <span>Dieta</span>
+          <div className="rejilla-botones">
+            {TIPOS_DIETA.map((opcion) => (
+              <button
+                key={opcion}
+                className="boton"
+                aria-pressed={borrador.dieta === opcion}
+                onClick={() => cambia({ dieta: opcion as TipoDieta })}
+              >
+                {ETIQUETA_TIPO_DIETA[opcion]}
+              </button>
+            ))}
+          </div>
+          <p className="suave">Solo si hubo dieta ese día — el importe lo fija el convenio, no aquí.</p>
         </div>
 
         <label className="campo">

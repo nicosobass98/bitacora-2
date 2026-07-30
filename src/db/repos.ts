@@ -54,6 +54,7 @@ export async function abreJornada(datos: {
     estado: 'abierta',
     // Se clasifica en frío al completar la jornada (§5.4), no al abrirla.
     tipo_horas: 'normal',
+    dieta: 'ninguna',
     // No es `instante`: dice cuándo se tocó el registro, no cuándo ocurrió lo
     // que cuenta. Con un inicio retrasado, copiarlo desordenaría la cola.
     actualizado_en: ahora(),

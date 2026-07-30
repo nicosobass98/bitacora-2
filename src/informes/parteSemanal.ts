@@ -36,10 +36,15 @@ import { formateaHorasExtra, minutosExtraAutomaticos, type HorarioLaboral } from
  * horario es hora extra. Una jornada marcada como «salida de guardia» es
  * aparte: siempre es hora extra, y como mínimo `minutos_minimos_guardia`
  * (Ajustes) aunque se haya resuelto antes — el mínimo lo fija el convenio, no
- * Bitácora. Festivo, nocturnidad, dietas y VºBº se dejan en blanco: son datos
- * que la app no tiene forma de saber con certeza, y rellenarlos igualmente
- * sería el mismo dato falso que la especificación evita en el resto de la
- * app (§7).
+ * Bitácora.
+ *
+ * De las dos columnas de dietas (M/D, D/C), se marca la que corresponda si la
+ * jornada tiene `dieta: 'media'` o `'completa'` — el importe no lo calcula
+ * Bitácora, lo fija el convenio, solo si la hubo o no.
+ *
+ * Festivo, nocturnidad y VºBº se dejan en blanco: son datos que la app no
+ * tiene forma de saber con certeza, y rellenarlos igualmente sería el mismo
+ * dato falso que la especificación evita en el resto de la app (§7).
  */
 
 const ANCHO_PAGINA_A4 = 11906; // DXA, en vertical — docx-js lo intercambia con apaisado.
@@ -110,6 +115,10 @@ export interface FilaParte {
   salida: string;
   /** Columna H/E: vacía si la jornada es normal. */
   horasExtra: string;
+  /** Columna M/D. */
+  mediaDieta: boolean;
+  /** Columna D/C. */
+  dietaCompleta: boolean;
   trabajos: string;
 }
 
@@ -165,6 +174,8 @@ export function construyeFilas(
       entrada: horaDe(jornada.hora_inicio),
       salida: horaDe(jornada.hora_fin),
       horasExtra,
+      mediaDieta: jornada.dieta === 'media',
+      dietaCompleta: jornada.dieta === 'completa',
       trabajos: textoTrabajos || '—',
     };
   });
@@ -216,8 +227,8 @@ function filaDatos(fila: FilaParte, anchos: number[]): TableRow {
     '', // H/F
     '', // P/N
     '', // C
-    '', // M/D
-    '', // D/C
+    fila.mediaDieta ? 'X' : '', // M/D
+    fila.dietaCompleta ? 'X' : '', // D/C
     '', // VºBº
     fila.trabajos,
   ];

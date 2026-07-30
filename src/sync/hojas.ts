@@ -25,6 +25,7 @@ export const CABECERAS: Record<Coleccion, string[]> = {
     'descripcion',
     'notas',
     'estado',
+    'dieta',
     'actualizado_en',
   ],
   ubicaciones: ['id', 'nombre', 'direccion', 'cliente', 'notas_acceso', 'actualizado_en'],
@@ -103,6 +104,7 @@ export function filaJornada(jornada: Jornada, fila: number): Fila {
     jornada.descripcion,
     jornada.notas,
     jornada.estado,
+    jornada.dieta,
     jornada.actualizado_en,
   ];
 }

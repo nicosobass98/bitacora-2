@@ -46,6 +46,20 @@ export const ETIQUETA_TIPO_HORAS: Record<TipoHoras, string> = {
   guardia: 'Salida de guardia',
 };
 
+/**
+ * Si hubo dieta ese día, y de qué tipo — para las columnas M/D y D/C del
+ * parte semanal. Solo importa si hay o no: el importe no lo calcula
+ * Bitácora, lo fija el convenio.
+ */
+export const TIPOS_DIETA = ['ninguna', 'media', 'completa'] as const;
+export type TipoDieta = (typeof TIPOS_DIETA)[number];
+
+export const ETIQUETA_TIPO_DIETA: Record<TipoDieta, string> = {
+  ninguna: 'Sin dieta',
+  media: 'Media dieta',
+  completa: 'Dieta completa',
+};
+
 export const TIPOS_NOTA = ['nota', 'recordatorio'] as const;
 export type TipoNota = (typeof TIPOS_NOTA)[number];
 
@@ -70,6 +84,8 @@ export interface Jornada {
   estado: EstadoJornada;
   /** Cómo cuenta para el parte semanal. Se completa en frío, no al abrir. */
   tipo_horas: TipoHoras;
+  /** Si hubo dieta ese día. Se completa en frío, no al abrir. */
+  dieta: TipoDieta;
   actualizado_en: InstanteISO;
 }
 
