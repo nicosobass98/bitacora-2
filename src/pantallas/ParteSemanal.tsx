@@ -19,7 +19,7 @@ import {
   inicioSemana,
   sumaDias,
 } from '../domain/tiempo';
-import { ETIQUETA_MOTIVO, ETIQUETA_TIPO_HORAS } from '../domain/tipos';
+import { ETIQUETA_MOTIVO, ETIQUETA_TIPO_DIETA, ETIQUETA_TIPO_HORAS } from '../domain/tipos';
 import { formateaHorasExtra, horarioDesdeAjustes, minutosExtraAutomaticos } from '../domain/horario';
 
 /**
@@ -183,7 +183,7 @@ export function ParteSemanal() {
             <>
               <p className="suave">
                 Las horas extra se calculan solas con tu horario (Ajustes). Toca una jornada para
-                marcarla como salida de guardia.
+                marcarla como salida de guardia o para apuntar si hubo dieta.
               </p>
               <ul className="lista">
                 {jornadas.map((jornada) => {
@@ -211,6 +211,9 @@ export function ParteSemanal() {
                           )}
                           {horasExtra && (
                             <span className="etiqueta-pastilla aviso">+{horasExtra} h extra</span>
+                          )}
+                          {jornada.dieta !== 'ninguna' && (
+                            <span className="etiqueta-pastilla">{ETIQUETA_TIPO_DIETA[jornada.dieta]}</span>
                           )}
                         </div>
                       </button>

@@ -38,9 +38,11 @@ function jornada(cambios: Partial<Jornada>): Jornada {
     ubicacion_id: null,
     motivo: null,
     sistema: null,
+    descripcion: '',
     notas: '',
     estado: 'cerrada',
     tipo_horas: 'normal',
+    dieta: 'ninguna',
     actualizado_en: '2026-05-04T14:00:00+02:00',
     ...cambios,
   };
@@ -89,12 +91,34 @@ describe('construyeFilas', () => {
     expect(fila?.obra).toBe('Sin asignar');
   });
 
-  it('combina motivo y notas en la descripción, sin inventar nada si faltan', () => {
-    const [conAmbos] = filas([jornada({ motivo: 'averia', notas: 'Cambiada la fuente' })]);
+  it('combina motivo y descripción en los trabajos, sin inventar nada si faltan', () => {
+    const [conAmbos] = filas([jornada({ motivo: 'averia', descripcion: 'Cambiada la fuente' })]);
     expect(conAmbos?.trabajos).toBe('Avería — Cambiada la fuente');
 
-    const [sinNada] = filas([jornada({ motivo: null, notas: '' })]);
+    const [sinNada] = filas([jornada({ motivo: null, descripcion: '' })]);
     expect(sinNada?.trabajos).toBe('—');
+  });
+
+  it('las notas privadas nunca aparecen en el parte', () => {
+    const [fila] = filas([
+      jornada({ motivo: 'averia', descripcion: 'Cambiada la fuente', notas: 'me encargo yo de esto' }),
+    ]);
+    expect(fila?.trabajos).toBe('Avería — Cambiada la fuente');
+    expect(fila?.trabajos).not.toContain('me encargo');
+  });
+
+  it('marca media dieta o dieta completa según corresponda, sin importe', () => {
+    const [sinDieta] = filas([jornada({ dieta: 'ninguna' })]);
+    expect(sinDieta?.mediaDieta).toBe(false);
+    expect(sinDieta?.dietaCompleta).toBe(false);
+
+    const [media] = filas([jornada({ dieta: 'media' })]);
+    expect(media?.mediaDieta).toBe(true);
+    expect(media?.dietaCompleta).toBe(false);
+
+    const [completa] = filas([jornada({ dieta: 'completa' })]);
+    expect(completa?.mediaDieta).toBe(false);
+    expect(completa?.dietaCompleta).toBe(true);
   });
 
   it('una jornada sin cerrar muestra la salida en blanco, no una hora inventada', () => {
@@ -155,7 +179,7 @@ describe('construyeFilas', () => {
 
   it('antepone «Guardia» a la descripción de una salida de guardia', () => {
     const [fila] = filas([
-      jornada({ tipo_horas: 'guardia', motivo: 'averia', notas: 'Rearme de central' }),
+      jornada({ tipo_horas: 'guardia', motivo: 'averia', descripcion: 'Rearme de central' }),
     ]);
     expect(fila?.trabajos).toBe('Guardia — Avería — Rearme de central');
   });

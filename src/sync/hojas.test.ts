@@ -10,9 +10,11 @@ const jornada: Jornada = {
   ubicacion_id: 'u-1',
   motivo: 'averia',
   sistema: 'cctv',
-  notas: 'Cambiada fuente de alimentación',
+  descripcion: 'Cambiada fuente de alimentación',
+  notas: 'Me acuerdo yo solo de esto',
   estado: 'cerrada',
   tipo_horas: 'normal',
+  dieta: 'ninguna',
   actualizado_en: '2026-07-29T14:20:00+02:00',
 };
 
@@ -50,7 +52,7 @@ describe('direcciones de celda', () => {
   });
 
   it('cubre exactamente el ancho de la hoja', () => {
-    expect(rangoFila('jornadas', 7)).toBe('jornadas!A7:L7');
+    expect(rangoFila('jornadas', 7)).toBe('jornadas!A7:N7');
     expect(rangoFila('ubicaciones', 2)).toBe('ubicaciones!A2:F2');
   });
 });

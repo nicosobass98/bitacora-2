@@ -54,7 +54,7 @@ export function FilaJornada({
           </span>
         )}
       </div>
-      {jornada.notas && <div className="suave">{jornada.notas.split('\n')[0]}</div>}
+      {jornada.descripcion && <div className="suave">{jornada.descripcion.split('\n')[0]}</div>}
     </button>
   );
 }

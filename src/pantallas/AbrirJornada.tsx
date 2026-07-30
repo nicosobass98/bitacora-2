@@ -197,7 +197,7 @@ function HistoricoUbicacion({ ubicacion }: { ubicacion: Ubicacion }) {
           <div className="suave">Última visita</div>
           <strong>{formateaFechaCorta(ultima.fecha)}</strong>
           {ultima.motivo && <> — {ETIQUETA_MOTIVO[ultima.motivo].toLowerCase()}</>}
-          {ultima.notas && <div>{ultima.notas}</div>}
+          {ultima.descripcion && <div>{ultima.descripcion}</div>}
         </>
       ) : (
         <div className="suave">Primera visita registrada a este sitio.</div>

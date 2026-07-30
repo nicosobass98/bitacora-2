@@ -70,9 +70,11 @@ describe('migración de esquema v1 → v2', () => {
       ubicacion_id: null,
       motivo: null,
       sistema: null,
+      descripcion: '',
       notas: '',
       estado: 'abierta',
       tipo_horas: 'normal',
+      dieta: 'ninguna',
       actualizado_en: '2026-07-29T08:00:00+02:00',
     });
     expect((await bd.get('jornadas', 'j-nueva'))?.tipo_horas).toBe('normal');
@@ -129,6 +131,92 @@ describe('migración de esquema v2 → v3', () => {
     expect((await bd.get('jornadas', 'j-extra'))?.tipo_horas).toBe('normal');
     // Una salida de guardia no se toca: sigue siendo guardia.
     expect((await bd.get('jornadas', 'j-guardia'))?.tipo_horas).toBe('guardia');
+    bd.close();
+  });
+});
+
+describe('migración de esquema v3 → v4', () => {
+  it('copia "notas" a la nueva "descripcion", sin perder lo que ya aparecía en el parte', async () => {
+    // Simula una base de la v3, de cuando "notas" era el único sitio donde
+    // escribir qué se había hecho — y por tanto lo que salía en el parte.
+    const vieja = await openDB(NOMBRE_BD, 3, {
+      upgrade(bd) {
+        const jornadas = bd.createObjectStore('jornadas', { keyPath: 'id' });
+        jornadas.createIndex('por-fecha', 'fecha');
+        jornadas.createIndex('por-ubicacion', 'ubicacion_id');
+        jornadas.createIndex('por-estado', 'estado');
+        bd.createObjectStore('ubicaciones', { keyPath: 'id' });
+        bd.createObjectStore('notas', { keyPath: 'id' });
+        bd.createObjectStore('outbox', { keyPath: 'id' });
+        bd.createObjectStore('ajustes', { keyPath: 'clave' });
+        bd.createObjectStore('guardias', { keyPath: 'inicio' });
+      },
+    });
+    await vieja.put('jornadas', {
+      id: 'j-vieja',
+      fecha: '2026-01-10',
+      hora_inicio: '2026-01-10T08:00:00+01:00',
+      hora_fin: '2026-01-10T14:00:00+01:00',
+      ubicacion_id: null,
+      motivo: 'averia',
+      sistema: null,
+      notas: 'Cambiada la fuente',
+      estado: 'cerrada',
+      tipo_horas: 'normal',
+      actualizado_en: '2026-01-10T14:00:00+01:00',
+      // Sin `descripcion`: así se guardaban las jornadas antes de esta versión.
+    });
+    vieja.close();
+
+    const bd = await abrirBD();
+    expect(bd.version).toBe(VERSION_BD);
+
+    const migrada = (await bd.get('jornadas', 'j-vieja')) as Jornada | undefined;
+    expect(migrada?.descripcion).toBe('Cambiada la fuente');
+    // No se toca: sigue estando disponible tal cual, por si había algo privado mezclado.
+    expect(migrada?.notas).toBe('Cambiada la fuente');
+    bd.close();
+  });
+});
+
+describe('migración de esquema v4 → v5', () => {
+  it('conserva las jornadas antiguas y les añade dieta: "ninguna"', async () => {
+    // Simula una base de la v4, de antes de que existiera el campo `dieta`.
+    const vieja = await openDB(NOMBRE_BD, 4, {
+      upgrade(bd) {
+        const jornadas = bd.createObjectStore('jornadas', { keyPath: 'id' });
+        jornadas.createIndex('por-fecha', 'fecha');
+        jornadas.createIndex('por-ubicacion', 'ubicacion_id');
+        jornadas.createIndex('por-estado', 'estado');
+        bd.createObjectStore('ubicaciones', { keyPath: 'id' });
+        bd.createObjectStore('notas', { keyPath: 'id' });
+        bd.createObjectStore('outbox', { keyPath: 'id' });
+        bd.createObjectStore('ajustes', { keyPath: 'clave' });
+        bd.createObjectStore('guardias', { keyPath: 'inicio' });
+      },
+    });
+    await vieja.put('jornadas', {
+      id: 'j-sin-dieta',
+      fecha: '2026-01-10',
+      hora_inicio: '2026-01-10T08:00:00+01:00',
+      hora_fin: '2026-01-10T14:00:00+01:00',
+      ubicacion_id: null,
+      motivo: null,
+      sistema: null,
+      descripcion: '',
+      notas: '',
+      estado: 'cerrada',
+      tipo_horas: 'normal',
+      actualizado_en: '2026-01-10T14:00:00+01:00',
+      // Sin `dieta`: así se guardaban las jornadas antes de esta versión.
+    });
+    vieja.close();
+
+    const bd = await abrirBD();
+    expect(bd.version).toBe(VERSION_BD);
+
+    const migrada = (await bd.get('jornadas', 'j-sin-dieta')) as Jornada | undefined;
+    expect(migrada?.dieta).toBe('ninguna');
     bd.close();
   });
 });

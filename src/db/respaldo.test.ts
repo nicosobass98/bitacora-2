@@ -35,7 +35,7 @@ async function limpia() {
 async function siembra() {
   const sitio = await creaUbicacion({ nombre: 'nave 3 polígono', notas_acceso: 'Aparcar detrás' });
   const jornada = await abreJornada({ ubicacion_id: sitio.id, motivo: 'averia' });
-  const cerrada = await cierraJornada(jornada.id, { notas: 'Cambiada la fuente' });
+  const cerrada = await cierraJornada(jornada.id, { descripcion: 'Cambiada la fuente' });
   const nota = await creaNota({ texto: 'Falta tubo de 25' });
   return { sitio, jornada: cerrada, nota };
 }
@@ -141,7 +141,7 @@ describe('importar', () => {
     expect(resumen.notas.nuevos).toBe(1);
 
     const restaurada = await obtenJornada(jornada.id);
-    expect(restaurada?.notas).toBe('Cambiada la fuente');
+    expect(restaurada?.descripcion).toBe('Cambiada la fuente');
     expect(restaurada?.ubicacion_id).toBe(sitio.id);
     expect((await todasLasUbicaciones())[0]?.notas_acceso).toBe('Aparcar detrás');
     expect((await todasLasNotas())[0]?.texto).toBe(nota.texto);

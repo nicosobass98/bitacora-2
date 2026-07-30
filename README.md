@@ -201,9 +201,17 @@ extra, dietas, VºBº y trabajos realizados.
 
 Solo se rellenan las columnas que Bitácora conoce de verdad — fecha, obra
 (nombre y cliente de la ubicación), horario, la columna H/E (ver abajo) y una
-descripción con el motivo y las notas. Festivo, nocturnidad, dietas y VºBº se
-dejan en blanco: inventar un valor ahí sería el mismo dato falso que la
-especificación evita en todas partes.
+descripción con el motivo y la **descripción** de la jornada. Festivo,
+nocturnidad, dietas y VºBº se dejan en blanco: inventar un valor ahí sería el
+mismo dato falso que la especificación evita en todas partes.
+
+Cada jornada tiene dos campos de texto distintos, a propósito:
+
+- **Descripción** — qué se ha hecho. Es lo que sale en el parte, junto al
+  motivo. Se pide al cerrar la jornada, y se puede repasar después.
+- **Notas privadas** — para el propio técnico. Solo se editan desde
+  *Historial* (completar en frío) y nunca aparecen en el parte ni en ningún
+  sitio fuera de esa jornada.
 
 *Ajustes → Datos para el parte semanal* guarda una vez el nombre, la
 categoría profesional, el NIF y una foto de la firma. Sin firma, el documento

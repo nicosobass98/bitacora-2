@@ -49,10 +49,12 @@ export async function abreJornada(datos: {
     ubicacion_id: datos.ubicacion_id ?? null,
     motivo: datos.motivo ?? null,
     sistema: datos.sistema ?? null,
+    descripcion: '',
     notas: '',
     estado: 'abierta',
     // Se clasifica en frío al completar la jornada (§5.4), no al abrirla.
     tipo_horas: 'normal',
+    dieta: 'ninguna',
     // No es `instante`: dice cuándo se tocó el registro, no cuándo ocurrió lo
     // que cuenta. Con un inicio retrasado, copiarlo desordenaría la cola.
     actualizado_en: ahora(),
@@ -81,7 +83,7 @@ export function estaCompleta(jornada: Jornada): boolean {
  */
 export async function cierraJornada(
   id: UUID,
-  cambios: { hora_fin?: string; notas?: string } = {},
+  cambios: { hora_fin?: string; descripcion?: string } = {},
 ): Promise<Jornada> {
   const bd = await abrirBD();
   const actual = await bd.get('jornadas', id);
@@ -91,7 +93,7 @@ export async function cierraJornada(
   const cerrada: Jornada = {
     ...actual,
     hora_fin,
-    notas: cambios.notas ?? actual.notas,
+    descripcion: cambios.descripcion ?? actual.descripcion,
     actualizado_en: ahora(),
     estado: 'cerrada',
   };

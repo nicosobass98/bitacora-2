@@ -75,7 +75,7 @@ describe('abrir y cerrar jornada', () => {
   it('al cerrar una jornada completa queda cerrada y encolada', async () => {
     const sitio = await creaUbicacion({ nombre: 'nave 3 polígono' });
     const jornada = await abreJornada({ ubicacion_id: sitio.id, motivo: 'averia' });
-    const cerrada = await cierraJornada(jornada.id, { notas: 'Cambiada la fuente' });
+    const cerrada = await cierraJornada(jornada.id, { descripcion: 'Cambiada la fuente' });
 
     expect(cerrada.estado).toBe('cerrada');
     expect(cerrada.hora_fin).toBeTruthy();

@@ -238,7 +238,7 @@ export function FichaUbicacion({ id }: { id: string }) {
                         <div className="suave">
                           {horaDe(entrada.jornada.hora_inicio)}
                           {entrada.jornada.hora_fin ? `–${horaDe(entrada.jornada.hora_fin)}` : ''}
-                          {entrada.jornada.notas ? ` · ${entrada.jornada.notas}` : ''}
+                          {entrada.jornada.descripcion ? ` · ${entrada.jornada.descripcion}` : ''}
                         </div>
                       </li>
                     ) : (

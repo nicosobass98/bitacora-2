@@ -13,13 +13,16 @@ import {
 import {
   ETIQUETA_MOTIVO,
   ETIQUETA_SISTEMA,
+  ETIQUETA_TIPO_DIETA,
   ETIQUETA_TIPO_HORAS,
   MOTIVOS,
   SISTEMAS,
+  TIPOS_DIETA,
   TIPOS_HORAS,
   type Jornada,
   type Motivo,
   type Sistema,
+  type TipoDieta,
   type TipoHoras,
 } from '../domain/tipos';
 
@@ -139,6 +142,23 @@ export function EditarJornada({ id }: { id: string }) {
           </p>
         </div>
 
+        <div className="campo">
+          <span>Dieta</span>
+          <div className="rejilla-botones">
+            {TIPOS_DIETA.map((opcion) => (
+              <button
+                key={opcion}
+                className="boton"
+                aria-pressed={borrador.dieta === opcion}
+                onClick={() => cambia({ dieta: opcion as TipoDieta })}
+              >
+                {ETIQUETA_TIPO_DIETA[opcion]}
+              </button>
+            ))}
+          </div>
+          <p className="suave">Solo si hubo dieta ese día — el importe lo fija el convenio, no aquí.</p>
+        </div>
+
         <label className="campo">
           <span>Inicio</span>
           <input
@@ -164,9 +184,19 @@ export function EditarJornada({ id }: { id: string }) {
         {finAntesDeInicio && <p className="aviso rojo">El fin es anterior al inicio.</p>}
 
         <label className="campo">
-          <span>Notas</span>
+          <span>Descripción</span>
+          <textarea
+            value={borrador.descripcion}
+            placeholder="Qué se ha hecho — esto es lo que sale en el parte."
+            onChange={(evento) => cambia({ descripcion: evento.target.value })}
+          />
+        </label>
+
+        <label className="campo">
+          <span>Notas privadas</span>
           <textarea
             value={borrador.notas}
+            placeholder="Para ti. Nunca aparece en el parte."
             onChange={(evento) => cambia({ notas: evento.target.value })}
           />
         </label>
