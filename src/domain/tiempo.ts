@@ -141,3 +141,43 @@ export function formateaFechaCorta(fecha: FechaISO, hoyISO: FechaISO = hoy()): s
 export function horasDesde(instante: InstanteISO, referencia: Date = new Date()): number {
   return (referencia.getTime() - milisegundos(instante)) / 3_600_000;
 }
+
+/**
+ * Interpreta un `FechaISO` como medianoche local, nunca como UTC.
+ *
+ * `new Date('2026-07-29')` lo trataría como UTC y desplazaría el día al
+ * convertirlo de vuelta a componentes locales — el mismo error que `tiempo.ts`
+ * evita en todas partes con los instantes completos.
+ */
+function aFechaLocal(fecha: FechaISO): Date {
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  return new Date(anio ?? 1970, (mes ?? 1) - 1, dia ?? 1);
+}
+
+export function sumaDias(fecha: FechaISO, dias: number): FechaISO {
+  const d = aFechaLocal(fecha);
+  d.setDate(d.getDate() + dias);
+  return aFechaISO(d);
+}
+
+/** Lunes de la semana (lunes a domingo) que contiene `fecha`. */
+export function inicioSemana(fecha: FechaISO): FechaISO {
+  const d = aFechaLocal(fecha);
+  const diaSemana = d.getDay(); // 0 domingo … 6 sábado
+  const desplazamiento = diaSemana === 0 ? -6 : 1 - diaSemana;
+  d.setDate(d.getDate() + desplazamiento);
+  return aFechaISO(d);
+}
+
+/** Domingo de la semana que contiene `fecha`. */
+export function finSemana(fecha: FechaISO): FechaISO {
+  return sumaDias(inicioSemana(fecha), 6);
+}
+
+/** `4 de mayo de 2026`, para encabezados formales como el parte semanal. */
+export function formateaFechaLarga(fecha: FechaISO): string {
+  const [anio, mes, dia] = fecha.split('-');
+  if (!anio || !mes || !dia) return fecha;
+  const nombreMes = MESES[Number(mes) - 1] ?? mes;
+  return `${Number(dia)} de ${nombreMes} de ${anio}`;
+}

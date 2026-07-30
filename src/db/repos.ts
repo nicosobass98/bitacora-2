@@ -157,6 +157,17 @@ export async function jornadasPorFecha(fecha: FechaISO): Promise<Jornada[]> {
   return jornadas.sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
 }
 
+/** Jornadas entre dos fechas, ambas inclusive. Para el parte semanal (§ informes). */
+export async function jornadasEntreFechas(inicio: FechaISO, fin: FechaISO): Promise<Jornada[]> {
+  const bd = await abrirBD();
+  const jornadas = await bd.getAllFromIndex(
+    'jornadas',
+    'por-fecha',
+    IDBKeyRange.bound(inicio, fin),
+  );
+  return jornadas.sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+}
+
 export async function jornadasPorUbicacion(ubicacionId: UUID): Promise<Jornada[]> {
   const bd = await abrirBD();
   const jornadas = await bd.getAllFromIndex('jornadas', 'por-ubicacion', ubicacionId);

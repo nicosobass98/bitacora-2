@@ -13,6 +13,7 @@
     "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false"
   },
   "dependencies": {
+    "docx": "^9.7.1",
     "idb": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

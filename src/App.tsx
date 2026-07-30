@@ -10,6 +10,7 @@ import { Completar, Dia, Historial } from './pantallas/Historial';
 import { FichaUbicacion, Ubicaciones } from './pantallas/Ubicaciones';
 import { EditarNota, NuevaNota, Notas } from './pantallas/Notas';
 import { Ajustes } from './pantallas/Ajustes';
+import { ParteSemanal } from './pantallas/ParteSemanal';
 
 /**
  * Tabla de rutas. El orden importa: las rutas literales van antes que las que
@@ -25,6 +26,7 @@ function resuelve(ruta: string) {
   if (ruta === '/notas') return { pantalla: <Notas />, conNota: true };
   if (ruta === '/notas/nueva') return { pantalla: <NuevaNota />, conNota: false };
   if (ruta === '/dia') return { pantalla: <Dia />, conNota: true };
+  if (ruta === '/parte') return { pantalla: <ParteSemanal />, conNota: false };
   if (ruta === '/ajustes') return { pantalla: <Ajustes />, conNota: false };
 
   const jornada = encaja('/jornada/:id', ruta);

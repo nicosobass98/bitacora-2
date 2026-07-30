@@ -96,9 +96,14 @@ export function Historial() {
         titulo="Historial"
         volver={false}
         accion={
-          <button className="boton plano" onClick={() => navega('/dia')}>
-            Por día
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="boton plano" onClick={() => navega('/dia')}>
+              Por día
+            </button>
+            <button className="boton plano" onClick={() => navega('/parte')}>
+              Parte semanal
+            </button>
+          </div>
         }
       />
       <div className="contenido">

@@ -6,10 +6,14 @@ import {
   desdeInputDateTime,
   duracionMinutos,
   fechaDe,
+  finSemana,
   formateaDuracion,
   formateaFechaCorta,
+  formateaFechaLarga,
   horaDe,
   horasDesde,
+  inicioSemana,
+  sumaDias,
 } from './tiempo';
 
 describe('serialización de instantes', () => {
@@ -92,5 +96,33 @@ describe('formato para pantalla', () => {
   it('omite el año en curso y lo añade en los demás', () => {
     expect(formateaFechaCorta('2026-03-12', '2026-07-29')).toBe('12 marzo');
     expect(formateaFechaCorta('2025-06-04', '2026-07-29')).toBe('4 junio 2025');
+  });
+
+  it('escribe la fecha larga para encabezados formales', () => {
+    expect(formateaFechaLarga('2026-05-04')).toBe('4 de mayo de 2026');
+  });
+});
+
+describe('semanas', () => {
+  it('encuentra el lunes de la semana sea cual sea el día de partida', () => {
+    // Lunes 4 de mayo de 2026 es el caso de referencia del parte semanal.
+    expect(inicioSemana('2026-05-04')).toBe('2026-05-04');
+    expect(inicioSemana('2026-05-06')).toBe('2026-05-04');
+    expect(inicioSemana('2026-05-10')).toBe('2026-05-04'); // domingo
+  });
+
+  it('el domingo cae siempre seis días después del lunes', () => {
+    expect(finSemana('2026-05-04')).toBe('2026-05-10');
+    expect(finSemana('2026-05-07')).toBe('2026-05-10');
+  });
+
+  it('cruza el cambio de mes y de año sin desviarse', () => {
+    expect(inicioSemana('2026-01-01')).toBe('2025-12-29');
+    expect(finSemana('2026-01-01')).toBe('2026-01-04');
+  });
+
+  it('suma días respetando cambios de mes', () => {
+    expect(sumaDias('2026-07-29', 7)).toBe('2026-08-05');
+    expect(sumaDias('2026-07-29', -7)).toBe('2026-07-22');
   });
 });
