@@ -39,6 +39,11 @@ Vienen de decisiones ya cerradas en la especificación:
 - **Nada destructivo sin confirmación** (componente `Confirmacion`).
 - **`motivo` y `sistema` son listas cerradas.** Añadir un valor es tocar
   `domain/tipos.ts`, no escribir texto libre.
+- **Cambiar el esquema de IndexedDB exige subir `VERSION_BD` en `db/db.ts` y
+  migrar en el mismo `upgrade`.** Un campo nuevo obligatorio en un tipo
+  existente (p. ej. `Jornada.tipo_horas`) tiene que rellenarse en los
+  registros que ya había, no solo en los nuevos — si no, un usuario real
+  pierde datos o la app lee `undefined` donde el tipo promete un valor.
 
 ## Estructura
 

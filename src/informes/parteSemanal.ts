@@ -15,7 +15,7 @@ import {
   type ITableBordersOptions,
 } from 'docx';
 import { ETIQUETA_MOTIVO, type Ajustes, type Jornada, type Ubicacion } from '../domain/tipos';
-import { formateaFechaLarga, horaDe } from '../domain/tiempo';
+import { duracionMinutos, formateaFechaLarga, horaDe } from '../domain/tiempo';
 
 /**
  * Genera el parte de trabajo semanal en `.docx`.
@@ -28,10 +28,14 @@ import { formateaFechaLarga, horaDe } from '../domain/tiempo';
  * exige la plantilla del cliente/empresa para nóminas y dietas— pero en
  * apaisado, para que quepan todas.
  *
- * Las columnas de horas extra, dietas y VºBº no las rellena la app: Bitácora
- * no modela esos datos, y llenarlas con algo inventado sería justo el dato
- * falso que la especificación quiere evitar (§7). Se dejan en blanco para
- * completar a mano si hace falta.
+ * De las cuatro columnas de horas extra (H/E, H/F, P/N, C) solo se rellena
+ * H/E, con lo que el usuario ha marcado en cada jornada (`tipo_horas`):
+ * en blanco si es normal, la duración real si es «hora extra», y como mínimo
+ * `minutos_minimos_guardia` (Ajustes) si es «salida de guardia» — el mínimo lo
+ * fija el convenio, no Bitácora. Festivo, nocturnidad, dietas y VºBº se dejan
+ * en blanco: son datos que la app no tiene forma de saber con certeza, y
+ * rellenarlos igualmente sería el mismo dato falso que la especificación
+ * evita en el resto de la app (§7).
  */
 
 const ANCHO_PAGINA_A4 = 11906; // DXA, en vertical — docx-js lo intercambia con apaisado.
@@ -100,7 +104,16 @@ export interface FilaParte {
   clienteProyecto: string;
   entrada: string;
   salida: string;
+  /** Columna H/E: vacía si la jornada es normal. */
+  horasExtra: string;
   trabajos: string;
+}
+
+/** `90` → `1:30`, `60` → `1`, `45` → `0:45`. Formato de la plantilla original. */
+export function formateaHorasExtra(minutos: number): string {
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `${horas}` : `${horas}:${String(resto).padStart(2, '0')}`;
 }
 
 /**
@@ -109,10 +122,16 @@ export interface FilaParte {
  * La fecha se escribe `día-mes` la primera vez y solo `día` mientras se siga
  * en el mismo mes — la misma convención que usaba la plantilla en papel, y
  * que evita repetir "-7" en cada fila de julio.
+ *
+ * `minutosMinimosGuardia` es el mínimo que compensa una salida de guardia
+ * (Ajustes, `minutos_minimos_guardia`), aunque la llamada se resolviera en
+ * menos tiempo. La hora de entrada y salida que se escribe en la fila es
+ * siempre la real: solo la cifra de horas extra refleja el mínimo.
  */
 export function construyeFilas(
   jornadas: Jornada[],
   ubicaciones: ReadonlyMap<string, Ubicacion>,
+  minutosMinimosGuardia: number,
 ): FilaParte[] {
   let mesAnterior: number | null = null;
   return jornadas.map((jornada) => {
@@ -123,12 +142,20 @@ export function construyeFilas(
     mesAnterior = mes;
 
     const ubicacion = jornada.ubicacion_id ? ubicaciones.get(jornada.ubicacion_id) : undefined;
+    const esGuardia = jornada.tipo_horas === 'guardia';
     const descripcion = [
+      esGuardia ? 'Guardia' : null,
       jornada.motivo ? ETIQUETA_MOTIVO[jornada.motivo] : null,
       jornada.notas || null,
     ]
       .filter(Boolean)
       .join(' — ');
+
+    const minutosReales = duracionMinutos(jornada.hora_inicio, jornada.hora_fin) ?? 0;
+    const horasExtra =
+      jornada.tipo_horas === 'normal'
+        ? ''
+        : formateaHorasExtra(esGuardia ? Math.max(minutosReales, minutosMinimosGuardia) : minutosReales);
 
     return {
       fecha,
@@ -136,6 +163,7 @@ export function construyeFilas(
       clienteProyecto: ubicacion?.cliente ?? '',
       entrada: horaDe(jornada.hora_inicio),
       salida: horaDe(jornada.hora_fin),
+      horasExtra,
       trabajos: descripcion || '—',
     };
   });
@@ -183,13 +211,13 @@ function filaDatos(fila: FilaParte, anchos: number[]): TableRow {
     fila.clienteProyecto,
     fila.entrada,
     fila.salida,
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
+    fila.horasExtra, // H/E
+    '', // H/F
+    '', // P/N
+    '', // C
+    '', // M/D
+    '', // D/C
+    '', // VºBº
     fila.trabajos,
   ];
   return new TableRow({
@@ -222,6 +250,12 @@ export interface DatosParteSemanal {
   fin: string;
   ajustes: Ajustes;
   filas: FilaParte[];
+  /**
+   * Si esta semana es de guardia. Se escribe siempre, en un sentido o en el
+   * otro — «si no lo estoy, que no lo estoy» — para que nunca quede la duda de
+   * si se olvidó marcar.
+   */
+  guardia: boolean;
 }
 
 function parrafo(texto: string, opciones: { negrita?: boolean; tamano?: number } = {}): Paragraph {
@@ -290,6 +324,7 @@ export async function construyeParteSemanal(datos: DatosParteSemanal): Promise<B
               .join('     '),
           ),
           parrafo(ajustes.nif ? `Nº identificación fiscal: ${ajustes.nif}` : ''),
+          parrafo(`Semana de guardia: ${datos.guardia ? 'Sí' : 'No'}`, { negrita: true }),
           new Paragraph({ text: '' }),
           new Table({
             width: { size: anchos.reduce((a, b) => a + b, 0), type: WidthType.DXA },

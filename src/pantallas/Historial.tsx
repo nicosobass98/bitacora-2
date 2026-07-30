@@ -14,6 +14,7 @@ import { formateaDuracion, duracionMinutos, formateaFechaCorta, horaDe, hoy } fr
 import {
   ETIQUETA_ESTADO_JORNADA,
   ETIQUETA_MOTIVO,
+  ETIQUETA_TIPO_HORAS,
   MOTIVOS,
   type Jornada,
   type Ubicacion,
@@ -40,6 +41,13 @@ export function FilaJornada({
         </span>
         <span>{formateaDuracion(duracionMinutos(jornada.hora_inicio, jornada.hora_fin))}</span>
         {jornada.motivo && <span>{ETIQUETA_MOTIVO[jornada.motivo]}</span>}
+        {jornada.tipo_horas !== 'normal' && (
+          <span
+            className={`etiqueta-pastilla ${jornada.tipo_horas === 'guardia' ? 'alerta' : 'aviso'}`}
+          >
+            {ETIQUETA_TIPO_HORAS[jornada.tipo_horas]}
+          </span>
+        )}
         {jornada.estado !== 'cerrada' && (
           <span className={`etiqueta-pastilla ${jornada.estado === 'incompleta' ? 'aviso' : ''}`}>
             {ETIQUETA_ESTADO_JORNADA[jornada.estado]}
