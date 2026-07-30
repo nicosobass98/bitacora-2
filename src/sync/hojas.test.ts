@@ -12,6 +12,7 @@ const jornada: Jornada = {
   sistema: 'cctv',
   notas: 'Cambiada fuente de alimentación',
   estado: 'cerrada',
+  tipo_horas: 'normal',
   actualizado_en: '2026-07-29T14:20:00+02:00',
 };
 

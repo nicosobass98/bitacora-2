@@ -13,11 +13,14 @@ import {
 import {
   ETIQUETA_MOTIVO,
   ETIQUETA_SISTEMA,
+  ETIQUETA_TIPO_HORAS,
   MOTIVOS,
   SISTEMAS,
+  TIPOS_HORAS,
   type Jornada,
   type Motivo,
   type Sistema,
+  type TipoHoras,
 } from '../domain/tipos';
 
 /**
@@ -113,6 +116,27 @@ export function EditarJornada({ id }: { id: string }) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="campo">
+          <span>Horas</span>
+          <div className="rejilla-botones">
+            {TIPOS_HORAS.map((opcion) => (
+              <button
+                key={opcion}
+                className="boton"
+                aria-pressed={borrador.tipo_horas === opcion}
+                onClick={() => cambia({ tipo_horas: opcion as TipoHoras })}
+              >
+                {ETIQUETA_TIPO_HORAS[opcion]}
+              </button>
+            ))}
+          </div>
+          {borrador.tipo_horas === 'guardia' && (
+            <p className="suave">
+              Cuenta como mínimo el umbral de guardia de Ajustes, aunque haya durado menos.
+            </p>
+          )}
         </div>
 
         <label className="campo">

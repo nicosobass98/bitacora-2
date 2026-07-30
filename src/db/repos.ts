@@ -11,6 +11,7 @@ import {
   type Jornada,
   type Motivo,
   type Nota,
+  type SemanaGuardia,
   type Sistema,
   type Ubicacion,
   type UUID,
@@ -50,6 +51,8 @@ export async function abreJornada(datos: {
     sistema: datos.sistema ?? null,
     notas: '',
     estado: 'abierta',
+    // Se clasifica en frío al completar la jornada (§5.4), no al abrirla.
+    tipo_horas: 'normal',
     // No es `instante`: dice cuándo se tocó el registro, no cuándo ocurrió lo
     // que cuenta. Con un inicio retrasado, copiarlo desordenaría la cola.
     actualizado_en: ahora(),
@@ -400,4 +403,34 @@ export async function guardaAjustes(cambios: Partial<Ajustes>): Promise<void> {
   }
   await tx.done;
   publica('ajustes');
+}
+
+// ---------------------------------------------------------------------------
+// Semanas de guardia
+// ---------------------------------------------------------------------------
+
+/** `inicio` es el lunes de la semana (`domain/tiempo.ts` → `inicioSemana`). */
+export async function esSemanaDeGuardia(inicio: FechaISO): Promise<boolean> {
+  const bd = await abrirBD();
+  return (await bd.get('guardias', inicio)) !== undefined;
+}
+
+/**
+ * Marca o desmarca una semana como de guardia. Se borra el registro en vez de
+ * guardar `activa: false`, porque lo único que hace falta distinguir es
+ * «marcada» de «sin marcar» — no hay un tercer estado.
+ */
+export async function marcaSemanaDeGuardia(inicio: FechaISO, activa: boolean): Promise<void> {
+  const bd = await abrirBD();
+  if (activa) {
+    await bd.put('guardias', { inicio, actualizado_en: ahora() });
+  } else {
+    await bd.delete('guardias', inicio);
+  }
+  publica('guardias');
+}
+
+export async function todasLasSemanasDeGuardia(): Promise<SemanaGuardia[]> {
+  const bd = await abrirBD();
+  return bd.getAll('guardias');
 }

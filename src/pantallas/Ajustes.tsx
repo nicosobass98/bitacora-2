@@ -432,6 +432,29 @@ export function Ajustes() {
         </div>
 
         <div className="seccion">
+          <h2>Salidas de guardia</h2>
+          <label className="campo">
+            <span>Mínimo que cuenta una salida de guardia (horas)</span>
+            <input
+              type="number"
+              min={0.5}
+              max={12}
+              step={0.5}
+              value={(ajustes?.minutos_minimos_guardia ?? 180) / 60}
+              onChange={(evento) => {
+                const horas = Number(evento.target.value);
+                if (!Number.isFinite(horas) || horas <= 0) return;
+                void guardaAjustes({ minutos_minimos_guardia: Math.round(horas * 60) });
+              }}
+            />
+          </label>
+          <p className="suave">
+            Una salida de guardia marcada en una jornada cuenta como mínimo este tiempo en el parte
+            semanal, aunque se haya resuelto antes. El mínimo lo fija el convenio, no Bitácora.
+          </p>
+        </div>
+
+        <div className="seccion">
           <h2>Sesión</h2>
           <button
             className="boton ancho"

@@ -15,6 +15,8 @@ import {
   cierraJornada,
   creaNota,
   creaUbicacion,
+  esSemanaDeGuardia,
+  marcaSemanaDeGuardia,
   obtenJornada,
   todasLasJornadas,
   todasLasNotas,
@@ -24,7 +26,7 @@ import { todosLosElementos } from './outbox';
 
 async function limpia() {
   const bd = await abrirBD();
-  for (const almacen of ['jornadas', 'ubicaciones', 'notas', 'outbox', 'ajustes'] as const) {
+  for (const almacen of ['jornadas', 'ubicaciones', 'notas', 'outbox', 'ajustes', 'guardias'] as const) {
     await bd.clear(almacen);
   }
 }
@@ -57,10 +59,19 @@ describe('exportar', () => {
     const respaldo = await construyeRespaldo();
     expect(Object.keys(respaldo).sort()).toEqual([
       'exportado_en',
+      'guardias',
       'jornadas',
       'notas',
       'ubicaciones',
       'version',
+    ]);
+  });
+
+  it('incluye las semanas de guardia marcadas', async () => {
+    await marcaSemanaDeGuardia('2026-07-27', true);
+    const respaldo = await construyeRespaldo();
+    expect(respaldo.guardias).toEqual([
+      expect.objectContaining({ inicio: '2026-07-27' }),
     ]);
   });
 
@@ -93,6 +104,25 @@ describe('validación al importar', () => {
       notas: [],
     });
     expect(() => leeRespaldo(corrupto)).toThrow(/identificador/);
+  });
+
+  it('acepta una copia de antes de que existieran las semanas de guardia', () => {
+    // Sin el campo `guardias`: es el formato exacto que exportaba la versión
+    // anterior de la app. No es una copia corrupta, es una copia más vieja.
+    const antigua = JSON.stringify({ version: 1, jornadas: [], ubicaciones: [], notas: [] });
+    const respaldo = leeRespaldo(antigua);
+    expect(respaldo.guardias).toEqual([]);
+  });
+
+  it('rechaza una semana de guardia sin fecha de inicio', () => {
+    const corrupto = JSON.stringify({
+      version: 1,
+      jornadas: [],
+      ubicaciones: [],
+      notas: [],
+      guardias: [{ actualizado_en: '2026-07-27T00:00:00+02:00' }],
+    });
+    expect(() => leeRespaldo(corrupto)).toThrow(/guardia/);
   });
 });
 
@@ -188,5 +218,18 @@ describe('importar', () => {
     const cola = await todosLosElementos();
     expect(cola.some((e) => e.coleccion === 'jornadas')).toBe(false);
     expect(await todasLasJornadas()).toHaveLength(1);
+  });
+
+  it('restaura las semanas de guardia sin encolarlas: son solo locales', async () => {
+    await marcaSemanaDeGuardia('2026-07-27', true);
+    const texto = serializaRespaldo(await construyeRespaldo());
+
+    await limpia();
+    const resumen = await aplicaRespaldo(leeRespaldo(texto));
+
+    expect(resumen.guardias.nuevos).toBe(1);
+    expect(await esSemanaDeGuardia('2026-07-27')).toBe(true);
+    const cola = await todosLosElementos();
+    expect(cola).toHaveLength(0);
   });
 });

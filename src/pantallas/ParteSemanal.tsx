@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Cabecera } from '../ui/componentes';
 import { useConsulta } from '../ui/hooks';
 import { navega } from '../ui/router';
-import { jornadasEntreFechas, leeAjustes, todasLasUbicaciones } from '../db/repos';
+import {
+  esSemanaDeGuardia,
+  jornadasEntreFechas,
+  leeAjustes,
+  marcaSemanaDeGuardia,
+  todasLasUbicaciones,
+} from '../db/repos';
 import {
   finSemana,
   formateaFechaCorta,
@@ -12,7 +18,7 @@ import {
   inicioSemana,
   sumaDias,
 } from '../domain/tiempo';
-import { ETIQUETA_MOTIVO } from '../domain/tipos';
+import { ETIQUETA_MOTIVO, ETIQUETA_TIPO_HORAS } from '../domain/tipos';
 
 /**
  * Genera el parte de trabajo de una semana (lunes a domingo) en `.docx`,
@@ -30,14 +36,15 @@ export function ParteSemanal() {
 
   const { datos } = useConsulta(
     async () => {
-      const [jornadas, ubicaciones, ajustes] = await Promise.all([
+      const [jornadas, ubicaciones, ajustes, guardia] = await Promise.all([
         jornadasEntreFechas(inicio, fin),
         todasLasUbicaciones(),
         leeAjustes(),
+        esSemanaDeGuardia(inicio),
       ]);
-      return { jornadas, ubicaciones, ajustes };
+      return { jornadas, ubicaciones, ajustes, guardia };
     },
-    ['jornadas', 'ubicaciones', 'ajustes'],
+    ['jornadas', 'ubicaciones', 'ajustes', 'guardias'],
     [inicio, fin],
   );
 
@@ -58,8 +65,14 @@ export function ParteSemanal() {
         '../informes/parteSemanal'
       );
       const porId = new Map(datos.ubicaciones.map((u) => [u.id, u]));
-      const filas = construyeFilas(jornadas, porId);
-      const blob = await construyeParteSemanal({ inicio, fin, ajustes: datos.ajustes, filas });
+      const filas = construyeFilas(jornadas, porId, datos.ajustes.minutos_minimos_guardia);
+      const blob = await construyeParteSemanal({
+        inicio,
+        fin,
+        ajustes: datos.ajustes,
+        filas,
+        guardia: datos.guardia,
+      });
       await entregaParteSemanal(blob, inicio);
       setGenerado(true);
     } catch (fallo) {
@@ -87,6 +100,31 @@ export function ParteSemanal() {
             {formateaFechaLarga(inicio)} — {formateaFechaLarga(fin)}
           </strong>
         </div>
+
+        {/*
+          Se pregunta siempre, en las dos direcciones: «si no lo estoy, que no
+          lo estoy» — nunca queda en blanco por olvido, y el parte lo dice
+          explícitamente en cualquiera de los dos casos.
+        */}
+        <label className="campo">
+          <span>¿Esta semana estás de guardia?</span>
+          <div className="rejilla-botones">
+            <button
+              className="boton"
+              aria-pressed={datos?.guardia === true}
+              onClick={() => void marcaSemanaDeGuardia(inicio, true)}
+            >
+              Sí
+            </button>
+            <button
+              className="boton"
+              aria-pressed={datos?.guardia === false}
+              onClick={() => void marcaSemanaDeGuardia(inicio, false)}
+            >
+              No
+            </button>
+          </div>
+        </label>
 
         {!datos?.ajustes.nombre_tecnico && (
           <div className="aviso">
@@ -121,25 +159,42 @@ export function ParteSemanal() {
           {jornadas.length === 0 ? (
             <p className="vacio">Ninguna jornada registrada en estos días.</p>
           ) : (
-            <ul className="lista">
-              {jornadas.map((jornada) => {
-                const ubicacion = jornada.ubicacion_id
-                  ? datos?.ubicaciones.find((u) => u.id === jornada.ubicacion_id)
-                  : undefined;
-                return (
-                  <li className="tarjeta" key={jornada.id}>
-                    <strong>{formateaFechaCorta(jornada.fecha)}</strong> —{' '}
-                    {ubicacion?.nombre ?? 'Sin asignar'}
-                    <div className="linea-meta">
-                      <span>
-                        {horaDe(jornada.hora_inicio)}–{horaDe(jornada.hora_fin)}
-                      </span>
-                      {jornada.motivo && <span>{ETIQUETA_MOTIVO[jornada.motivo]}</span>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              <p className="suave">
+                Toca una jornada para marcarla como hora extra o salida de guardia.
+              </p>
+              <ul className="lista">
+                {jornadas.map((jornada) => {
+                  const ubicacion = jornada.ubicacion_id
+                    ? datos?.ubicaciones.find((u) => u.id === jornada.ubicacion_id)
+                    : undefined;
+                  return (
+                    <li key={jornada.id}>
+                      <button
+                        className="tarjeta pulsable"
+                        onClick={() => navega(`/jornada/${jornada.id}`)}
+                      >
+                        <strong>{formateaFechaCorta(jornada.fecha)}</strong> —{' '}
+                        {ubicacion?.nombre ?? 'Sin asignar'}
+                        <div className="linea-meta">
+                          <span>
+                            {horaDe(jornada.hora_inicio)}–{horaDe(jornada.hora_fin)}
+                          </span>
+                          {jornada.motivo && <span>{ETIQUETA_MOTIVO[jornada.motivo]}</span>}
+                          {jornada.tipo_horas !== 'normal' && (
+                            <span
+                              className={`etiqueta-pastilla ${jornada.tipo_horas === 'guardia' ? 'alerta' : 'aviso'}`}
+                            >
+                              {ETIQUETA_TIPO_HORAS[jornada.tipo_horas]}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
 

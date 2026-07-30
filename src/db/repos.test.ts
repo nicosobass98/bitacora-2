@@ -6,22 +6,26 @@ import {
   cierraJornada,
   creaNota,
   creaUbicacion,
+  esSemanaDeGuardia,
   estaCompleta,
   guardaJornada,
   jornadaAbierta,
+  jornadasEntreFechas,
   jornadasPorCompletar,
   jornadasPorFecha,
   jornadasPorUbicacion,
   leeAjustes,
   guardaAjustes,
+  marcaSemanaDeGuardia,
   pendientesDeHoy,
+  todasLasSemanasDeGuardia,
   ubicacionesPorUsoReciente,
 } from './repos';
 import { hoy } from '../domain/tiempo';
 
 async function limpia() {
   const bd = await abrirBD();
-  for (const almacen of ['jornadas', 'ubicaciones', 'notas', 'outbox', 'ajustes'] as const) {
+  for (const almacen of ['jornadas', 'ubicaciones', 'notas', 'outbox', 'ajustes', 'guardias'] as const) {
     await bd.clear(almacen);
   }
 }
@@ -42,6 +46,11 @@ describe('abrir y cerrar jornada', () => {
     const jornada = await abreJornada({ hora_inicio: '2026-03-12T22:40:00+01:00' });
     expect(jornada.hora_inicio).toBe('2026-03-12T22:40:00+01:00');
     expect(jornada.estado).toBe('abierta');
+  });
+
+  it('abre siempre como horas normales: la clasificación se decide en frío', async () => {
+    const jornada = await abreJornada({});
+    expect(jornada.tipo_horas).toBe('normal');
   });
 
   it('archiva la jornada en el día de su hora de inicio, no en el de hoy', async () => {
@@ -131,6 +140,39 @@ describe('búsqueda bidireccional', () => {
 
     expect(await jornadasPorUbicacion(sitio.id)).toHaveLength(2);
     expect(await jornadasPorFecha(hoy())).toHaveLength(2);
+  });
+
+  it('jornadasEntreFechas incluye los dos extremos del rango', async () => {
+    const sitio = await creaUbicacion({ nombre: 'nave 3 polígono' });
+    const dentro = await abreJornada({ ubicacion_id: sitio.id, hora_inicio: '2026-05-06T08:00:00+02:00' });
+    await cierraJornada(dentro.id, { hora_fin: '2026-05-06T10:00:00+02:00' });
+    const enElBorde = await abreJornada({ ubicacion_id: sitio.id, hora_inicio: '2026-05-10T08:00:00+02:00' });
+    await cierraJornada(enElBorde.id, { hora_fin: '2026-05-10T10:00:00+02:00' });
+    const fuera = await abreJornada({ ubicacion_id: sitio.id, hora_inicio: '2026-05-11T08:00:00+02:00' });
+    await cierraJornada(fuera.id, { hora_fin: '2026-05-11T10:00:00+02:00' });
+
+    const semana = await jornadasEntreFechas('2026-05-04', '2026-05-10');
+    expect(semana.map((j) => j.id).sort()).toEqual([dentro.id, enElBorde.id].sort());
+  });
+});
+
+describe('semanas de guardia', () => {
+  it('una semana no marcada no es de guardia', async () => {
+    expect(await esSemanaDeGuardia('2026-07-27')).toBe(false);
+  });
+
+  it('marcar y desmarcar cambia el resultado', async () => {
+    await marcaSemanaDeGuardia('2026-07-27', true);
+    expect(await esSemanaDeGuardia('2026-07-27')).toBe(true);
+
+    await marcaSemanaDeGuardia('2026-07-27', false);
+    expect(await esSemanaDeGuardia('2026-07-27')).toBe(false);
+  });
+
+  it('no afecta a otras semanas', async () => {
+    await marcaSemanaDeGuardia('2026-07-27', true);
+    expect(await esSemanaDeGuardia('2026-08-03')).toBe(false);
+    expect(await todasLasSemanasDeGuardia()).toHaveLength(1);
   });
 });
 

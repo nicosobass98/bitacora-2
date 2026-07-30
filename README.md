@@ -200,15 +200,35 @@ parte que exige la empresa/cliente: fecha, obra, cliente, horario, horas
 extra, dietas, VºBº y trabajos realizados.
 
 Solo se rellenan las columnas que Bitácora conoce de verdad — fecha, obra
-(nombre y cliente de la ubicación), horario y una descripción con el motivo y
-las notas. Horas extra, dietas y VºBº se dejan en blanco: inventar un valor
-ahí sería el mismo dato falso que la especificación evita en todas partes.
+(nombre y cliente de la ubicación), horario, la columna H/E (ver abajo) y una
+descripción con el motivo y las notas. Festivo, nocturnidad, dietas y VºBº se
+dejan en blanco: inventar un valor ahí sería el mismo dato falso que la
+especificación evita en todas partes.
 
 *Ajustes → Datos para el parte semanal* guarda una vez el nombre, la
 categoría profesional, el NIF y una foto de la firma. Sin firma, el documento
 deja una línea en blanco para firmar a mano — nunca se inventa una. Estos
 datos no se sincronizan ni entran en la copia de seguridad: son personales y
 no tienen por qué viajar a otro dispositivo.
+
+#### Horas extra y guardias
+
+Cada jornada se puede clasificar en la pantalla de edición («Horas»: Normal /
+Hora extra / Salida de guardia), igual que se completan el motivo o la
+ubicación — en frío, no al abrir.
+
+- **Hora extra** — cuenta la duración real de la jornada en la columna H/E.
+- **Salida de guardia** — cuenta como mínimo lo que fije *Ajustes → Salidas de
+  guardia* (3 horas por defecto), aunque la llamada se haya resuelto antes. La
+  hora de entrada y salida que se escribe en el parte es siempre la real:
+  solo la cifra de horas extra refleja el mínimo del convenio.
+
+Además, en *Parte semanal* se marca si esa semana entera es de guardia. Se
+pregunta en los dos sentidos y el documento lo dice explícitamente, «Sí» o
+«No» — nunca en blanco, para que no quede la duda de si se olvidó marcar.
+
+Esto es solo local: no se sincroniza con Sheets ni pasa por la cola outbox,
+pero sí entra en la copia de seguridad (§Copia de seguridad en un fichero).
 
 ## Estado y siguientes pasos
 

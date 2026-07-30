@@ -26,6 +26,26 @@ export type Sistema = (typeof SISTEMAS)[number];
 export const ESTADOS_JORNADA = ['abierta', 'cerrada', 'incompleta'] as const;
 export type EstadoJornada = (typeof ESTADOS_JORNADA)[number];
 
+/**
+ * Clasificación de la jornada para el parte semanal (`informes/parteSemanal.ts`).
+ * No es lo mismo que `motivo` (qué se hizo): esto es cómo se compensa.
+ *
+ * - `normal` — dentro del horario habitual. No sale en la columna de horas extra.
+ * - `extra` — fuera de horario, pero no una salida de guardia. Cuenta la
+ *   duración real de la jornada.
+ * - `guardia` — salida de guardia: una llamada durante el turno de guardia.
+ *   Cuenta como mínimo `minutos_minimos_guardia` (Ajustes), aunque se haya
+ *   resuelto en menos tiempo — eso lo decide el convenio, no Bitácora.
+ */
+export const TIPOS_HORAS = ['normal', 'extra', 'guardia'] as const;
+export type TipoHoras = (typeof TIPOS_HORAS)[number];
+
+export const ETIQUETA_TIPO_HORAS: Record<TipoHoras, string> = {
+  normal: 'Horas normales',
+  extra: 'Horas extra',
+  guardia: 'Salida de guardia',
+};
+
 export const TIPOS_NOTA = ['nota', 'recordatorio'] as const;
 export type TipoNota = (typeof TIPOS_NOTA)[number];
 
@@ -45,6 +65,8 @@ export interface Jornada {
   sistema: Sistema | null;
   notas: string;
   estado: EstadoJornada;
+  /** Cómo cuenta para el parte semanal. Se completa en frío, no al abrir. */
+  tipo_horas: TipoHoras;
   actualizado_en: InstanteISO;
 }
 
@@ -81,6 +103,21 @@ export interface Nota {
   ubicacion_id: UUID | null;
   /** §6 — si es `false` y hay `fecha_aviso`, la nota se muestra destacada. */
   enviado_a_calendario: boolean;
+  actualizado_en: InstanteISO;
+}
+
+/**
+ * Marca una semana entera (lunes de esa semana) como de guardia, para que el
+ * parte semanal lo diga explícitamente — en un sentido o en el otro, nunca en
+ * blanco: «si no lo estoy, que no lo estoy».
+ *
+ * Solo local: no se sincroniza con Sheets ni pasa por la cola outbox. Sí entra
+ * en la copia de seguridad (`db/respaldo.ts`), porque perderla sería perder un
+ * dato real.
+ */
+export interface SemanaGuardia {
+  /** Lunes de la semana (`domain/tiempo.ts` → `inicioSemana`). Clave primaria. */
+  inicio: FechaISO;
   actualizado_en: InstanteISO;
 }
 
@@ -132,6 +169,8 @@ export interface Ajustes {
   /** Dimensiones reales de la imagen, para no deformarla al insertarla en el parte. */
   firma_ancho: number | null;
   firma_alto: number | null;
+  /** Mínimo que cuenta una salida de guardia, en minutos. El convenio lo fija, no Bitácora. */
+  minutos_minimos_guardia: number;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -144,6 +183,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   firma_imagen: null,
   firma_ancho: null,
   firma_alto: null,
+  minutos_minimos_guardia: 180,
 };
 
 // ---------------------------------------------------------------------------

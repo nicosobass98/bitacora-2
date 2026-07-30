@@ -6,7 +6,7 @@
  * pantalla siempre lee de IndexedDB, que es la fuente de verdad.
  */
 
-export type TemaCambio = 'jornadas' | 'ubicaciones' | 'notas' | 'outbox' | 'ajustes';
+export type TemaCambio = 'jornadas' | 'ubicaciones' | 'notas' | 'outbox' | 'ajustes' | 'guardias';
 
 type Oyente = (tema: TemaCambio) => void;
 

@@ -2,7 +2,14 @@ import { abrirBD } from './db';
 import { publica } from './bus';
 import { encola } from './outbox';
 import { ahora } from '../domain/tiempo';
-import { COLECCIONES, type Coleccion, type Jornada, type Nota, type Ubicacion } from '../domain/tipos';
+import {
+  COLECCIONES,
+  type Coleccion,
+  type Jornada,
+  type Nota,
+  type SemanaGuardia,
+  type Ubicacion,
+} from '../domain/tipos';
 
 /**
  * Copia de seguridad en un fichero.
@@ -22,6 +29,11 @@ export interface Respaldo {
   jornadas: Jornada[];
   ubicaciones: Ubicacion[];
   notas: Nota[];
+  /**
+   * Opcional por compatibilidad: las copias exportadas antes de que existieran
+   * las semanas de guardia no traen este campo, y no por eso están corruptas.
+   */
+  guardias: SemanaGuardia[];
 }
 
 export interface ResumenColeccion {
@@ -30,7 +42,9 @@ export interface ResumenColeccion {
   omitidos: number;
 }
 
-export type ResumenImportacion = Record<Coleccion, ResumenColeccion>;
+export type ResumenImportacion = Record<Coleccion, ResumenColeccion> & {
+  guardias: ResumenColeccion;
+};
 
 export class ErrorRespaldo extends Error {
   constructor(mensaje: string) {
@@ -46,12 +60,13 @@ export class ErrorRespaldo extends Error {
  */
 export async function construyeRespaldo(): Promise<Respaldo> {
   const bd = await abrirBD();
-  const [jornadas, ubicaciones, notas] = await Promise.all([
+  const [jornadas, ubicaciones, notas, guardias] = await Promise.all([
     bd.getAll('jornadas'),
     bd.getAll('ubicaciones'),
     bd.getAll('notas'),
+    bd.getAll('guardias'),
   ]);
-  return { version: VERSION_RESPALDO, exportado_en: ahora(), jornadas, ubicaciones, notas };
+  return { version: VERSION_RESPALDO, exportado_en: ahora(), jornadas, ubicaciones, notas, guardias };
 }
 
 export function serializaRespaldo(respaldo: Respaldo): string {
@@ -66,6 +81,13 @@ function esRegistro(valor: unknown): valor is { id: string; actualizado_en: stri
   if (typeof valor !== 'object' || valor === null) return false;
   const registro = valor as Record<string, unknown>;
   return typeof registro.id === 'string' && registro.id.length > 0;
+}
+
+/** Las semanas de guardia usan `inicio` como clave, no `id`. */
+function esRegistroGuardia(valor: unknown): valor is SemanaGuardia {
+  if (typeof valor !== 'object' || valor === null) return false;
+  const registro = valor as Record<string, unknown>;
+  return typeof registro.inicio === 'string' && registro.inicio.length > 0;
 }
 
 /**
@@ -100,12 +122,22 @@ export function leeRespaldo(texto: string): Respaldo {
     }
   }
 
+  // Campo añadido después de la v1 del formato: si falta, es una copia de
+  // antes de que existieran las semanas de guardia, no una copia corrupta.
+  const guardias = datos.guardias;
+  if (guardias !== undefined) {
+    if (!Array.isArray(guardias) || !guardias.every(esRegistroGuardia)) {
+      throw new ErrorRespaldo('Hay semanas de guardia sin fecha de inicio. La copia está corrupta.');
+    }
+  }
+
   return {
     version: VERSION_RESPALDO,
     exportado_en: typeof datos.exportado_en === 'string' ? datos.exportado_en : ahora(),
     jornadas: datos.jornadas as Jornada[],
     ubicaciones: datos.ubicaciones as Ubicacion[],
     notas: datos.notas as Nota[],
+    guardias: Array.isArray(guardias) ? (guardias as SemanaGuardia[]) : [],
   };
 }
 
@@ -126,6 +158,7 @@ export async function aplicaRespaldo(respaldo: Respaldo): Promise<ResumenImporta
     jornadas: vacio(),
     ubicaciones: vacio(),
     notas: vacio(),
+    guardias: vacio(),
   };
   const porEncolar: { coleccion: Coleccion; datos: Jornada | Ubicacion | Nota }[] = [];
 
@@ -152,7 +185,28 @@ export async function aplicaRespaldo(respaldo: Respaldo): Promise<ResumenImporta
     await tx.done;
   }
 
-  publica('jornadas', 'ubicaciones', 'notas');
+  // Las semanas de guardia son locales: se mezclan igual (gana el
+  // `actualizado_en` más reciente), pero nunca se encolan hacia Sheets.
+  {
+    const tx = bd.transaction('guardias', 'readwrite');
+    for (const entrante of respaldo.guardias) {
+      const existente = await tx.store.get(entrante.inicio);
+      if (existente) {
+        const masNuevo = (entrante.actualizado_en ?? '') > (existente.actualizado_en ?? '');
+        if (!masNuevo) {
+          resumen.guardias.omitidos++;
+          continue;
+        }
+        resumen.guardias.actualizados++;
+      } else {
+        resumen.guardias.nuevos++;
+      }
+      await tx.store.put(entrante);
+    }
+    await tx.done;
+  }
+
+  publica('jornadas', 'ubicaciones', 'notas', 'guardias');
 
   // Lo importado también tiene que llegar a la hoja: si se restaura en un móvil
   // nuevo, la copia de Drive no puede quedarse a medias. Se encola después de
@@ -167,7 +221,12 @@ export async function aplicaRespaldo(respaldo: Respaldo): Promise<ResumenImporta
 }
 
 export function totalRegistros(respaldo: Respaldo): number {
-  return respaldo.jornadas.length + respaldo.ubicaciones.length + respaldo.notas.length;
+  return (
+    respaldo.jornadas.length +
+    respaldo.ubicaciones.length +
+    respaldo.notas.length +
+    respaldo.guardias.length
+  );
 }
 
 /**
