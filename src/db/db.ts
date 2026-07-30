@@ -10,7 +10,7 @@ import type { ElementoOutbox, Jornada, Nota, SemanaGuardia, Ubicacion } from '..
  */
 
 export const NOMBRE_BD = 'bitacora';
-export const VERSION_BD = 3;
+export const VERSION_BD = 4;
 
 interface EsquemaBitacora extends DBSchema {
   jornadas: {
@@ -113,6 +113,25 @@ export function abrirBD(): Promise<BD> {
             const valor = cursor.value as unknown as { tipo_horas?: string };
             if (valor.tipo_horas === 'extra') {
               await cursor.update({ ...cursor.value, tipo_horas: 'normal' } as Jornada);
+            }
+            cursor = await cursor.continue();
+          }
+        }
+        if (versionAnterior < 4) {
+          // `descripcion` es nuevo: lo que se imprime en el parte semanal, aparte
+          // de `notas`, que a partir de ahora es privado y no sale de la jornada.
+          // Las jornadas de antes de este esquema ya usaban `notas` con ese fin
+          // (era el único campo que había), así que se copia ahí para no perder
+          // lo que ya aparecía en partes anteriores. `notas` se deja como estaba:
+          // quien quiera separar lo privado de lo que ya escribió tiene que
+          // revisarlo a mano, una vez, para las jornadas de semanas aún no
+          // entregadas — no hay forma automática de saber qué era cada cosa.
+          const almacen = tx.objectStore('jornadas');
+          let cursor = await almacen.openCursor();
+          while (cursor) {
+            const valor = cursor.value as unknown as { descripcion?: string; notas?: string };
+            if (valor.descripcion === undefined) {
+              await cursor.update({ ...cursor.value, descripcion: valor.notas ?? '' } as Jornada);
             }
             cursor = await cursor.continue();
           }

@@ -63,6 +63,9 @@ export interface Jornada {
   ubicacion_id: UUID | null;
   motivo: Motivo | null;
   sistema: Sistema | null;
+  /** Lo que describe el trabajo hecho: sale en el parte semanal, junto al motivo. */
+  descripcion: string;
+  /** Para el propio técnico. Nunca se imprime en el parte ni se muestra fuera de esta jornada. */
   notas: string;
   estado: EstadoJornada;
   /** Cómo cuenta para el parte semanal. Se completa en frío, no al abrir. */

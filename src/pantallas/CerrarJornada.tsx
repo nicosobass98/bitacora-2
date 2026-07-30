@@ -14,7 +14,7 @@ import {
 } from '../domain/tiempo';
 
 /**
- * §5.3 — Confirmar hora, notas opcionales, cerrar.
+ * §5.3 — Confirmar hora, descripción opcional, cerrar.
  *
  * Cerrar deprisa es un caso previsto, no un error: la jornada queda en
  * `incompleta` y aparece en el contador de por completar.
@@ -31,13 +31,13 @@ export function CerrarJornada() {
   );
 
   const [horaFin, setHoraFin] = useState('');
-  const [notas, setNotas] = useState('');
+  const [descripcion, setDescripcion] = useState('');
   const [cerrando, setCerrando] = useState(false);
 
   useEffect(() => {
     if (datos?.abierta && !horaFin) {
       setHoraFin(aInputDateTime(ahora()));
-      setNotas(datos.abierta.notas);
+      setDescripcion(datos.abierta.descripcion);
     }
   }, [datos?.abierta, horaFin]);
 
@@ -70,7 +70,7 @@ export function CerrarJornada() {
   async function cerrar() {
     if (cerrando || finAntesDeInicio || !finISO) return;
     setCerrando(true);
-    await cierraJornada(abierta.id, { hora_fin: finISO, notas });
+    await cierraJornada(abierta.id, { hora_fin: finISO, descripcion });
     navega('/', true);
   }
 
@@ -110,13 +110,14 @@ export function CerrarJornada() {
         )}
 
         <label className="campo">
-          <span>Notas</span>
+          <span>Descripción</span>
           <textarea
-            value={notas}
-            placeholder="Qué se ha hecho, qué queda pendiente…"
-            onChange={(evento) => setNotas(evento.target.value)}
+            value={descripcion}
+            placeholder="Qué se ha hecho — esto es lo que sale en el parte."
+            onChange={(evento) => setDescripcion(evento.target.value)}
           />
         </label>
+        <p className="suave">Para notas privadas, se añaden después desde el historial.</p>
 
         <button
           className="boton primario ancho"

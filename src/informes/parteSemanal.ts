@@ -144,10 +144,11 @@ export function construyeFilas(
 
     const ubicacion = jornada.ubicacion_id ? ubicaciones.get(jornada.ubicacion_id) : undefined;
     const esGuardia = jornada.tipo_horas === 'guardia';
-    const descripcion = [
+    // `notas` es privado (§domain/tipos.ts): el parte solo lee `descripcion`.
+    const textoTrabajos = [
       esGuardia ? 'Guardia' : null,
       jornada.motivo ? ETIQUETA_MOTIVO[jornada.motivo] : null,
-      jornada.notas || null,
+      jornada.descripcion || null,
     ]
       .filter(Boolean)
       .join(' — ');
@@ -164,7 +165,7 @@ export function construyeFilas(
       entrada: horaDe(jornada.hora_inicio),
       salida: horaDe(jornada.hora_fin),
       horasExtra,
-      trabajos: descripcion || '—',
+      trabajos: textoTrabajos || '—',
     };
   });
 }

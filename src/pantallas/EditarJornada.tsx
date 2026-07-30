@@ -164,9 +164,19 @@ export function EditarJornada({ id }: { id: string }) {
         {finAntesDeInicio && <p className="aviso rojo">El fin es anterior al inicio.</p>}
 
         <label className="campo">
-          <span>Notas</span>
+          <span>Descripción</span>
+          <textarea
+            value={borrador.descripcion}
+            placeholder="Qué se ha hecho — esto es lo que sale en el parte."
+            onChange={(evento) => cambia({ descripcion: evento.target.value })}
+          />
+        </label>
+
+        <label className="campo">
+          <span>Notas privadas</span>
           <textarea
             value={borrador.notas}
+            placeholder="Para ti. Nunca aparece en el parte."
             onChange={(evento) => cambia({ notas: evento.target.value })}
           />
         </label>

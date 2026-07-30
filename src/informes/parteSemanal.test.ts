@@ -38,6 +38,7 @@ function jornada(cambios: Partial<Jornada>): Jornada {
     ubicacion_id: null,
     motivo: null,
     sistema: null,
+    descripcion: '',
     notas: '',
     estado: 'cerrada',
     tipo_horas: 'normal',
@@ -89,12 +90,20 @@ describe('construyeFilas', () => {
     expect(fila?.obra).toBe('Sin asignar');
   });
 
-  it('combina motivo y notas en la descripción, sin inventar nada si faltan', () => {
-    const [conAmbos] = filas([jornada({ motivo: 'averia', notas: 'Cambiada la fuente' })]);
+  it('combina motivo y descripción en los trabajos, sin inventar nada si faltan', () => {
+    const [conAmbos] = filas([jornada({ motivo: 'averia', descripcion: 'Cambiada la fuente' })]);
     expect(conAmbos?.trabajos).toBe('Avería — Cambiada la fuente');
 
-    const [sinNada] = filas([jornada({ motivo: null, notas: '' })]);
+    const [sinNada] = filas([jornada({ motivo: null, descripcion: '' })]);
     expect(sinNada?.trabajos).toBe('—');
+  });
+
+  it('las notas privadas nunca aparecen en el parte', () => {
+    const [fila] = filas([
+      jornada({ motivo: 'averia', descripcion: 'Cambiada la fuente', notas: 'me encargo yo de esto' }),
+    ]);
+    expect(fila?.trabajos).toBe('Avería — Cambiada la fuente');
+    expect(fila?.trabajos).not.toContain('me encargo');
   });
 
   it('una jornada sin cerrar muestra la salida en blanco, no una hora inventada', () => {
@@ -155,7 +164,7 @@ describe('construyeFilas', () => {
 
   it('antepone «Guardia» a la descripción de una salida de guardia', () => {
     const [fila] = filas([
-      jornada({ tipo_horas: 'guardia', motivo: 'averia', notas: 'Rearme de central' }),
+      jornada({ tipo_horas: 'guardia', motivo: 'averia', descripcion: 'Rearme de central' }),
     ]);
     expect(fila?.trabajos).toBe('Guardia — Avería — Rearme de central');
   });
