@@ -177,6 +177,21 @@ describe('construyeFilas', () => {
     expect(fila?.horasExtra).toBe('4');
   });
 
+  it('lleva los minutos de horas extra en minutosExtra, para poder sumarlos en totales', () => {
+    // Viernes 08:00-16:00: 1:30 de extra, igual que arriba pero en minutos.
+    const viernes = jornada({
+      fecha: '2026-05-08',
+      hora_inicio: instante(2026, 5, 8, 8, 0),
+      hora_fin: instante(2026, 5, 8, 16, 0),
+    });
+    const sinExtra = jornada({});
+    const [filaViernes, filaSinExtra] = filas([viernes, sinExtra]);
+    expect(filaViernes?.minutosExtra).toBe(90);
+    expect(filaSinExtra?.minutosExtra).toBe(0);
+    const total = [filaViernes, filaSinExtra].reduce((suma, fila) => suma + (fila?.minutosExtra ?? 0), 0);
+    expect(total).toBe(90);
+  });
+
   it('antepone «Guardia» a la descripción de una salida de guardia', () => {
     const [fila] = filas([
       jornada({ tipo_horas: 'guardia', motivo: 'averia', descripcion: 'Rearme de central' }),

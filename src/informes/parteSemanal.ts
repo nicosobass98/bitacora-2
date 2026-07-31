@@ -45,6 +45,9 @@ import { formateaHorasExtra, minutosExtraAutomaticos, type HorarioLaboral } from
  * Festivo, nocturnidad y VºBº se dejan en blanco: son datos que la app no
  * tiene forma de saber con certeza, y rellenarlos igualmente sería el mismo
  * dato falso que la especificación evita en el resto de la app (§7).
+ *
+ * La fila TOTALES solo suma H/E: es la columna que se paga aparte. Las demás
+ * se dejan en blanco, igual que en cada fila de datos.
  */
 
 const ANCHO_PAGINA_A4 = 11906; // DXA, en vertical — docx-js lo intercambia con apaisado.
@@ -115,6 +118,8 @@ export interface FilaParte {
   salida: string;
   /** Columna H/E: vacía si la jornada es normal. */
   horasExtra: string;
+  /** Minutos de `horasExtra`, para poder sumarlos en la fila de totales. */
+  minutosExtra: number;
   /** Columna M/D. */
   mediaDieta: boolean;
   /** Columna D/C. */
@@ -174,6 +179,7 @@ export function construyeFilas(
       entrada: horaDe(jornada.hora_inicio),
       salida: horaDe(jornada.hora_fin),
       horasExtra,
+      minutosExtra,
       mediaDieta: jornada.dieta === 'media',
       dietaCompleta: jornada.dieta === 'completa',
       trabajos: textoTrabajos || '—',
@@ -239,7 +245,14 @@ function filaDatos(fila: FilaParte, anchos: number[]): TableRow {
   });
 }
 
-function filaTotales(anchos: number[]): TableRow {
+/**
+ * Fila de totales. Solo suma la columna H/E: es la única que se paga aparte y
+ * la que de verdad hay que cuadrar al final de la semana. Las demás (H/F, P/N,
+ * C, M/D, D/C, VºBº) se dejan en blanco, igual que en cada fila de datos.
+ */
+function filaTotales(anchos: number[], filas: FilaParte[]): TableRow {
+  const totalMinutos = filas.reduce((total, fila) => total + fila.minutosExtra, 0);
+  const totalHorasExtra = totalMinutos > 0 ? formateaHorasExtra(totalMinutos) : '';
   return new TableRow({
     children: [
       new TableCell({
@@ -252,7 +265,10 @@ function filaTotales(anchos: number[]): TableRow {
           }),
         ],
       }),
-      ...anchos.slice(3).map((ancho) => celda('', { ancho })),
+      ...anchos.slice(3).map((ancho, i) => {
+        const esColumnaHorasExtra = i + 3 === 5;
+        return celda(esColumnaHorasExtra ? totalHorasExtra : '', { ancho, negrita: esColumnaHorasExtra });
+      }),
     ],
   });
 }
@@ -346,7 +362,7 @@ export async function construyeParteSemanal(datos: DatosParteSemanal): Promise<B
               filaCabecera1(anchos),
               filaCabecera2(anchos),
               ...filas.map((fila) => filaDatos(fila, anchos)),
-              filaTotales(anchos),
+              filaTotales(anchos, filas),
             ],
           }),
           new Paragraph({ text: '' }),
