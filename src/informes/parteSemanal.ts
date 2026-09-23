@@ -30,13 +30,14 @@ import { formateaHorasExtra, minutosExtraAutomaticos, type HorarioLaboral } from
  * apaisado, para que quepan todas.
  *
  * De las cuatro columnas de horas extra (H/E, H/F, P/N, C) solo se rellena
- * H/E, y no hace falta marcarla a mano: se calcula comparando la hora real
- * de cada jornada con el horario habitual del usuario (`domain/horario.ts`,
- * que cambia con el mes y el día de la semana). Lo que cae fuera de ese
- * horario es hora extra. Una jornada marcada como «salida de guardia» es
- * aparte: siempre es hora extra, y como mínimo `minutos_minimos_guardia`
- * (Ajustes) aunque se haya resuelto antes — el mínimo lo fija el convenio, no
- * Bitácora.
+ * H/E, y no hace falta marcarla a mano: se calcula sumando el total trabajado
+ * ese día y comparándolo con el total que toca (`domain/horario.ts`, que
+ * cambia con el mes y el día de la semana) — da igual la hora de entrada, la
+ * de salida o dónde caiga el descanso. Lo que pase de ese total es hora
+ * extra; lo que quede corto no resta nada. Una jornada marcada como «salida
+ * de guardia» es aparte: siempre es hora extra, y como mínimo
+ * `minutos_minimos_guardia` (Ajustes) aunque se haya resuelto antes — el
+ * mínimo lo fija el convenio, no Bitácora.
  *
  * De las dos columnas de dietas (M/D, D/C), se marca la que corresponda si la
  * jornada tiene `dieta: 'media'` o `'completa'` — el importe no lo calcula
@@ -135,12 +136,14 @@ export interface FilaParte {
  * que evita repetir "-7" en cada fila de julio.
  *
  * La columna H/E no se marca a mano: una jornada `normal` cuenta solo lo que
- * cae fuera del horario habitual ese día (`domain/horario.ts`), calculado a
- * partir de la hora real de entrada y salida. Una `guardia` es siempre hora
- * extra —cuente lo que cuente el horario ese día— y como mínimo
- * `minutosMinimosGuardia` (Ajustes), aunque la llamada se resolviera antes.
- * En los dos casos, la hora de entrada y salida que se escribe en la fila es
- * siempre la real: solo la cifra de horas extra puede diferir de ella.
+ * pasa de las horas exigidas ese día (`domain/horario.ts`), comparando el
+ * total trabajado —hora real de entrada y salida— con el total que toca, sin
+ * mirar cuándo empieza, termina o descansa dentro de la jornada. Una
+ * `guardia` es siempre hora extra —cuente lo que cuente el horario ese día—
+ * y como mínimo `minutosMinimosGuardia` (Ajustes), aunque la llamada se
+ * resolviera antes. En los dos casos, la hora de entrada y salida que se
+ * escribe en la fila es siempre la real: solo la cifra de horas extra puede
+ * diferir de ella.
  */
 export function construyeFilas(
   jornadas: Jornada[],

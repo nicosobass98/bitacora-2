@@ -1,4 +1,4 @@
-import { aFechaLocal, aInstanteISO, duracionMinutos, fechaDe, milisegundos } from './tiempo';
+import { aFechaLocal, duracionMinutos, fechaDe } from './tiempo';
 import type { Ajustes, FechaISO, InstanteISO } from './tipos';
 
 /**
@@ -6,16 +6,19 @@ import type { Ajustes, FechaISO, InstanteISO } from './tipos';
  *
  * Bitácora no puede preguntar cada vez «¿esto era horario normal?» — el
  * horario del usuario ya lo dice: cambia según el mes (jornada intensiva de
- * verano) y según el día de la semana (turno partido de lunes a jueves,
- * jornada continua los viernes). Lo que cae fuera de esos tramos, en
- * cualquier día, es hora extra sin que nadie tenga que marcarlo a mano.
+ * verano) y según el día de la semana (más horas de lunes a jueves, menos el
+ * viernes). Lo que importa cada día es cuántas horas hay que hacer en total,
+ * no a qué hora se empieza, se termina o se para a comer: da igual el
+ * comienzo y el final, solo se suman las horas trabajadas y se comparan con
+ * las que tocan ese día. Si suma menos, no hay hora extra —tampoco horas
+ * «negativas»—; si suma más, todo lo que pase de ahí es hora extra.
  *
  * Una salida de guardia es aparte: siempre es hora extra, cuente lo que
  * cuente el horario ese día, porque por definición ocurre fuera del turno
  * asignado. Su cómputo vive en `parteSemanal.ts`, no aquí.
  */
 
-/** Un tramo de horario, en `HH:MM` de 24 horas. */
+/** Un tramo de horario, en `HH:MM` de 24 horas. Solo importa su duración. */
 export interface Tramo {
   inicio: string;
   fin: string;
@@ -67,42 +70,30 @@ export function tramosDelDia(fecha: FechaISO, horario: HorarioLaboral): Tramo[] 
   return horario.lunesJueves;
 }
 
-function instanteDelDia(fecha: FechaISO, horaHHMM: string): InstanteISO {
+function minutosDeHora(horaHHMM: string): number {
   const [horas, minutos] = horaHHMM.split(':').map(Number);
-  const d = aFechaLocal(fecha);
-  d.setHours(horas ?? 0, minutos ?? 0, 0, 0);
-  return aInstanteISO(d);
+  return (horas ?? 0) * 60 + (minutos ?? 0);
 }
 
 /**
- * Minutos de una jornada que caen dentro de su horario normal ese día — el
- * solape entre `[hora_inicio, hora_fin]` y cada tramo, sumado. Si la jornada
- * cruza el hueco entre tramos de un turno partido (p. ej. se sigue trabajando
- * en la hora de la comida), ese hueco no cuenta como normal: es justo lo que
- * hace que sea hora extra.
+ * Cuántos minutos hay que trabajar ese día para no generar hora extra: la
+ * suma de la duración de sus tramos, no las horas concretas de cada uno. Así,
+ * quien no hace la pausa exactamente a la hora del tramo configurado —o la
+ * hace más larga, más corta, o no la hace— no ve horas extra falsas solo por
+ * eso: lo único que cuenta es el total del día.
  */
-export function minutosNormales(
-  horaInicio: InstanteISO,
-  horaFin: InstanteISO | null,
-  horario: HorarioLaboral,
-): number {
-  if (!horaFin) return 0;
-  const fecha = fechaDe(horaInicio);
-  const inicioMs = milisegundos(horaInicio);
-  const finMs = milisegundos(horaFin);
-
-  let total = 0;
-  for (const tramo of tramosDelDia(fecha, horario)) {
-    const tramoInicioMs = milisegundos(instanteDelDia(fecha, tramo.inicio));
-    const tramoFinMs = milisegundos(instanteDelDia(fecha, tramo.fin));
-    const solapeInicio = Math.max(inicioMs, tramoInicioMs);
-    const solapeFin = Math.min(finMs, tramoFinMs);
-    if (solapeFin > solapeInicio) total += solapeFin - solapeInicio;
-  }
-  return Math.round(total / 60_000);
+export function minutosRequeridosDelDia(fecha: FechaISO, horario: HorarioLaboral): number {
+  return tramosDelDia(fecha, horario).reduce(
+    (total, tramo) => total + (minutosDeHora(tramo.fin) - minutosDeHora(tramo.inicio)),
+    0,
+  );
 }
 
-/** Lo que sobra de la jornada una vez descontado lo que cae en horario normal. */
+/**
+ * Lo que sobra de la jornada una vez llegado a las horas exigidas ese día.
+ * Compara solo el total: no le importa la hora de entrada ni de salida, ni
+ * dónde cae el descanso dentro de la jornada.
+ */
 export function minutosExtraAutomaticos(
   horaInicio: InstanteISO,
   horaFin: InstanteISO | null,
@@ -110,7 +101,8 @@ export function minutosExtraAutomaticos(
 ): number {
   const totalMinutos = duracionMinutos(horaInicio, horaFin);
   if (totalMinutos === null || totalMinutos <= 0) return 0;
-  return Math.max(0, totalMinutos - minutosNormales(horaInicio, horaFin, horario));
+  const requeridos = minutosRequeridosDelDia(fechaDe(horaInicio), horario);
+  return Math.max(0, totalMinutos - requeridos);
 }
 
 /**

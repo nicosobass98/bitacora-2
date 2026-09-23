@@ -278,8 +278,10 @@ function HorarioLaboralAjustes({ ajustes }: { ajustes: TipoAjustes | undefined }
     <div className="seccion">
       <h2>Horario laboral</h2>
       <p className="suave">
-        El parte semanal compara cada jornada con este horario: lo que cae fuera cuenta como hora
-        extra sin que haya que marcarlo. Cambia si cambia tu contrato o el convenio.
+        El parte semanal suma cuánto trabajas cada día y lo compara con las horas que marca este
+        horario: lo que pase de ahí cuenta como hora extra, sin que haya que marcarlo. No importa a
+        qué hora empiezas, terminas o descansas — solo el total. Cambia si cambia tu contrato o el
+        convenio.
       </p>
 
       <label className="campo">

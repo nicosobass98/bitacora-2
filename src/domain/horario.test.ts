@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formateaHorasExtra,
   minutosExtraAutomaticos,
-  minutosNormales,
+  minutosRequeridosDelDia,
   tramosDelDia,
   type HorarioLaboral,
 } from './horario';
@@ -21,7 +21,12 @@ function instante(anio: number, mes: number, dia: number, hora: number, minuto: 
   return aInstanteISO(new Date(anio, mes - 1, dia, hora, minuto));
 }
 
-/** El horario real descrito: intensiva en julio-agosto, partido el resto del año. */
+/**
+ * El horario real: intensiva en julio-agosto (6:30), 8:30 de lunes a jueves y
+ * 6:30 los viernes el resto del año. Los tramos son los mismos de siempre —
+ * es como el usuario piensa su jornada—, pero lo único que cuenta ahora es su
+ * duración total, no las horas concretas de cada uno.
+ */
 const HORARIO: HorarioLaboral = {
   mesInicioVerano: 7,
   mesFinVerano: 8,
@@ -57,43 +62,60 @@ describe('tramosDelDia', () => {
   });
 });
 
-describe('minutosNormales / minutosExtraAutomaticos', () => {
-  it('una jornada dentro del tramo es toda normal', () => {
-    const inicio = instante(2026, 5, 4, 8, 0); // lunes
-    const fin = instante(2026, 5, 4, 14, 0);
-    expect(minutosNormales(inicio, fin, HORARIO)).toBe(360);
+describe('minutosRequeridosDelDia', () => {
+  it('sale de sumar la duración de los tramos, no de sus horas concretas', () => {
+    expect(minutosRequeridosDelDia('2026-05-04', HORARIO)).toBe(510); // 8:30, lunes
+    expect(minutosRequeridosDelDia('2026-05-08', HORARIO)).toBe(390); // 6:30, viernes
+    expect(minutosRequeridosDelDia('2026-07-15', HORARIO)).toBe(390); // 6:30, verano
+    expect(minutosRequeridosDelDia('2026-05-09', HORARIO)).toBe(0); // sábado
+  });
+});
+
+describe('minutosExtraAutomaticos', () => {
+  it('trabajar menos del total exigido no genera hora extra, ni la resta', () => {
+    const inicio = instante(2026, 5, 4, 8, 0); // lunes, 8:30 exigidas
+    const fin = instante(2026, 5, 4, 14, 0); // 6h trabajadas
     expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(0);
   });
 
-  it('empezar antes de hora cuenta como extra', () => {
-    // Lunes: turno de mañana empieza a las 08:00; llega a las 07:30.
-    const inicio = instante(2026, 5, 4, 7, 30);
-    const fin = instante(2026, 5, 4, 14, 0);
+  it('no importa la hora de entrada ni de salida, solo el total del día', () => {
+    // Lunes, empezando y acabando fuera de los tramos configurados (9:00 en
+    // vez de 8:00, 17:00 en vez de 17:30): 8h trabajadas, menos de las 8:30
+    // exigidas, así que sigue sin haber hora extra.
+    const inicio = instante(2026, 5, 4, 9, 0);
+    const fin = instante(2026, 5, 4, 17, 0);
+    expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(0);
+  });
+
+  it('trabajar sin descanso en el hueco del turno partido no genera hora extra por sí solo', () => {
+    // Lunes 08:00-16:30, sin parar a comer: 8:30 en total, justo lo exigido.
+    // Antes, cualquier minuto en el hueco 14:00-15:00 contaba como extra sin
+    // serlo — este es el caso que lo prueba.
+    const inicio = instante(2026, 5, 4, 8, 0);
+    const fin = instante(2026, 5, 4, 16, 30);
+    expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(0);
+  });
+
+  it('lo que pase del total exigido sí es hora extra, aunque sea sin descanso', () => {
+    // Lunes 08:00-17:00: 9h en total, media hora por encima de las 8:30.
+    const inicio = instante(2026, 5, 4, 8, 0);
+    const fin = instante(2026, 5, 4, 17, 0);
     expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(30);
   });
 
   it('quedarse después de hora cuenta como extra', () => {
-    const inicio = instante(2026, 5, 8, 8, 0); // viernes, sale a las 14:30
-    const fin = instante(2026, 5, 8, 16, 0);
+    const inicio = instante(2026, 5, 8, 8, 0); // viernes, 6:30 exigidas
+    const fin = instante(2026, 5, 8, 16, 0); // 8h trabajadas
     expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(90);
-  });
-
-  it('trabajar durante el hueco de un turno partido cuenta ese hueco como extra', () => {
-    // Lunes: 13:00 a 15:30 cruza el hueco de la comida (14:00-15:00).
-    const inicio = instante(2026, 5, 4, 13, 0);
-    const fin = instante(2026, 5, 4, 15, 30);
-    expect(minutosNormales(inicio, fin, HORARIO)).toBe(90); // 13-14 y 15-15:30
-    expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(60); // 14:00-15:00
   });
 
   it('una jornada entera en fin de semana es entera hora extra', () => {
     const inicio = instante(2026, 5, 9, 10, 0);
     const fin = instante(2026, 5, 9, 12, 0);
-    expect(minutosNormales(inicio, fin, HORARIO)).toBe(0);
     expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(120);
   });
 
-  it('en jornada intensiva de verano, quedarse después de las 14:30 es extra', () => {
+  it('en jornada intensiva de verano, pasarse de las 6:30 exigidas es extra', () => {
     const inicio = instante(2026, 7, 15, 8, 0);
     const fin = instante(2026, 7, 15, 16, 0);
     expect(minutosExtraAutomaticos(inicio, fin, HORARIO)).toBe(90);
@@ -101,7 +123,6 @@ describe('minutosNormales / minutosExtraAutomaticos', () => {
 
   it('sin hora de fin no se puede calcular nada: cero, no un valor inventado', () => {
     const inicio = instante(2026, 5, 4, 8, 0);
-    expect(minutosNormales(inicio, null, HORARIO)).toBe(0);
     expect(minutosExtraAutomaticos(inicio, null, HORARIO)).toBe(0);
   });
 });
